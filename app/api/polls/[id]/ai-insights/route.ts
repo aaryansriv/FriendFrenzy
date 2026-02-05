@@ -27,16 +27,23 @@ export async function GET(
 
         // 1. Check if insights already exist (unless forced)
         if (!force) {
-            const { data: existingInsights, error: fetchError } = await supabase
+            const { data: existingInsights } = await supabase
                 .from('poll_ai_insights')
                 .select('insights')
                 .eq('poll_id', id)
                 .maybeSingle();
 
             if (existingInsights && existingInsights.insights) {
-                // If it looks like a fallback, and NOT forced, we still serve it,
-                // BUT the reason you see generic might be because it was CACHED as fallback.
-                return NextResponse.json(existingInsights.insights);
+                const insights = existingInsights.insights;
+                // Check if the cached results are fallback results
+                const isCachedFallback = (insights as any).friendJudgments?.some((j: any) =>
+                    j.judgment.includes('FALLBACK_GENERATION')
+                );
+
+                if (!isCachedFallback) {
+                    console.log(`AI_ROUTE: Serving cached insights for ${id}`);
+                    return NextResponse.json(insights);
+                }
             }
         }
 
@@ -78,6 +85,7 @@ export async function GET(
         if (resultsError || friendsError || confessionsError) throw new Error('Failed to gather poll data');
 
         // 4. Generate AI Insights
+        console.log(`AI_ROUTE: Generating fresh insights for poll ${id}...`);
         const insights = await generatePollInsights(
             { ...poll, creator_name: (poll as any).creators?.name },
             results || [],
@@ -89,6 +97,7 @@ export async function GET(
         const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
         if (!isFallback) {
+            console.log(`AI_ROUTE: Caching fresh insights for ${id}`);
             const { error: insertError } = await supabase
                 .from('poll_ai_insights')
                 .upsert({

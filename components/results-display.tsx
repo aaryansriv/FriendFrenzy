@@ -19,22 +19,65 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (isClosed) {
-      const fetchAI = async () => {
-        setLoadingAI(true);
-        try {
-          const data = await getAIInsights(pollId, refreshKey > 0);
-          if (!data.message) {
-            setAiInsights(data);
+    let pollInterval: NodeJS.Timeout;
+    let pollCount = 0;
+    const MAX_POLLS = 20; // 60 seconds total
+
+    const fetchInsights = async (isForced = false) => {
+      if (!isClosed) return;
+      setLoadingAI(true);
+
+      try {
+        const data = await getAIInsights(pollId, isForced);
+
+        // Check if we got a fallback (processing) response
+        const isFallback = data.friendJudgments?.some((j: any) => j.judgment.includes('FALLBACK_GENERATION'));
+
+        if (!data.message && !isFallback) {
+          setAiInsights(data);
+          setLoadingAI(false);
+          if (pollInterval) clearInterval(pollInterval);
+        } else if (isForced || isFallback) {
+          // If the server returned a fallback, we must keep polling until the REAL ones appear
+          if (!pollInterval) {
+            console.log("AI_UI: Starting poll for insights...");
+            pollInterval = setInterval(async () => {
+              pollCount++;
+              console.log(`AI_UI: Polling attempt ${pollCount}/${MAX_POLLS}`);
+
+              if (pollCount >= MAX_POLLS) {
+                console.log("AI_UI: Max polls reached.");
+                clearInterval(pollInterval);
+                setLoadingAI(false);
+                return;
+              }
+
+              // Poll WITHOUT forcing, so it just reads from Supabase
+              const pollData = await getAIInsights(pollId, false);
+              const isStillFallback = pollData.friendJudgments?.some((j: any) => j.judgment.includes('FALLBACK_GENERATION'));
+
+              if (!pollData.message && !isStillFallback) {
+                console.log("AI_UI: Real insights found!");
+                setAiInsights(pollData);
+                setLoadingAI(false);
+                clearInterval(pollInterval);
+              }
+            }, 3000); // Check every 3 seconds
           }
-        } catch (err: any) {
-          console.error('Failed to fetch AI insights:', err);
-        } finally {
+        } else {
           setLoadingAI(false);
         }
-      };
-      fetchAI();
-    }
+      } catch (err: any) {
+        console.error('Failed to fetch AI insights:', err);
+        setLoadingAI(false);
+      }
+    };
+
+    fetchInsights(refreshKey > 0);
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [pollId, isClosed, refreshKey]);
 
   if (!questions) return null;
