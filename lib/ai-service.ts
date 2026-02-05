@@ -263,15 +263,19 @@ ${JSON.stringify(pollSummary, null, 2)}
             // Cleanup JSON string
             content = content.trim();
 
-            // Strip DeepSeek reasoning tokens if present
+            // 1. Strip DeepSeek reasoning tokens if present
             content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-            if (content.startsWith("```")) {
-                content = content.replace(/^```json/, "").replace(/^```/, "").replace(/```$/, "").trim();
+            // 2. Extract JSON using a robust scanner
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                content = jsonMatch[0];
             }
 
             try {
-                return JSON.parse(content);
+                const parsed = JSON.parse(content);
+                console.log(`AI_SERVICE: Successfully parsed JSON from ${model}`);
+                return parsed;
             } catch (parseError) {
                 console.error(`AI_SERVICE: JSON Parse Error for model ${model}. Raw content:`, content);
                 continue;

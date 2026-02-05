@@ -27,7 +27,7 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
           if (!data.message) {
             setAiInsights(data);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to fetch AI insights:', err);
         } finally {
           setLoadingAI(false);
