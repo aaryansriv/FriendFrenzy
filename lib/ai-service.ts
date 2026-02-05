@@ -14,8 +14,8 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
-    "tngtech/deepseek-r1t2-chimera:free",
     "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
     "google/gemma-3-27b-it:free",
     "mistralai/mistral-small-3.1-24b-instruct:free"
 ];
@@ -28,8 +28,11 @@ export async function generatePollInsights(
 ): Promise<AIServiceResponse> {
     const apiKey = process.env.OPENROUTER_API_KEY;
 
+    console.log(`AI_SERVICE: Starting analysis for ${friends.length} friends...`);
+    console.log(`AI_SERVICE: API Key detected: ${!!apiKey} (${apiKey?.substring(0, 8)}...)`);
+
     if (!apiKey) {
-        console.error("AI_SERVICE: OPENROUTER_API_KEY is missing");
+        console.error("AI_SERVICE: OPENROUTER_API_KEY is missing from process.env");
         return getFallbackInsights(friends);
     }
 
@@ -69,6 +72,7 @@ This is playful, clever, slightly unhinged social analysis.
 CORE BEHAVIOR
 -----------------------------
 - Be DANK, not wholesome
+- Be Indian, use Indian references
 - Be FUNNY, not safe
 - Be OBSERVATIONAL, not random
 - Sound like Twitter + group chat humor
@@ -95,7 +99,7 @@ RULES:
 - Max 20 words per judgment
 - No two judgments may sound alike
 - Use contrast (winner vs ghost vs mid)
-- Include ONE unexpected metaphor or pop-culture-style comparison
+- Include ONE unexpected metaphor or pop-culture-style or bollywood comparison
 - Never repeat phrases across friends
 - Roast behavior, not identity
 - If someone dominates → exaggerate power
@@ -248,6 +252,8 @@ ${JSON.stringify(pollSummary, null, 2)}
                 console.warn(`AI_SERVICE: Model ${model} returned empty content. Trying next...`);
                 continue;
             }
+
+            console.log(`AI_SERVICE: Model ${model} SUCCESS. Content length: ${content.length}`);
 
             // Cleanup JSON string
             content = content.trim();

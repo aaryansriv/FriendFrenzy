@@ -20,6 +20,10 @@ export async function GET(
             console.error("AI_ROUTE: OPENROUTER_API_KEY is missing from environment variables!");
         }
 
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            console.error("AI_ROUTE: SUPABASE_SERVICE_ROLE_KEY is missing! Site data queries will fail.");
+        }
+
         // 1. Check if insights already exist (unless forced)
         if (!force) {
             const { data: existingInsights, error: fetchError } = await supabase
