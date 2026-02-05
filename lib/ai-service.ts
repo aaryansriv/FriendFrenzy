@@ -14,10 +14,9 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
     "meta-llama/llama-3.2-3b-instruct:free",
     "google/gemma-3-4b-it:free",
-    "google/gemma-3-27b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
     "tngtech/deepseek-r1t2-chimera:free"
 ];
 
@@ -133,7 +132,7 @@ For notable pairs:
 - Be brutally funny but friendly
 - Interpret percentages like gossip
 - Use "this could either..." logic
-- One sentence per pair
+- One sentence per pair (max 10 words)
 No repeats.
 
 -----------------------------
@@ -154,7 +153,7 @@ RULES:
   - Song name
   - Artist
   - Vibe (1–2 words)
-  - Short reason (max 15 words)
+  - Short reason (max 8 words)
 - No fake songs
 - No niche artists
 
@@ -206,6 +205,11 @@ OUTPUT FORMAT (STRICT JSON)
 }
 
 If a joke might genuinely hurt someone in real life, rewrite it to target behavior or group dynamics instead.
+
+ULTRA-STRICT SPEED RULES:
+- BE EXTREMELY BRIEF.
+- TOTAL OUTPUT MUST BE UNDER 300 TOKENS.
+- NO FLUFFER. JUST RAW DATA.
 `;
 
     const userPrompt = `
@@ -232,7 +236,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                         { role: "user", content: userPrompt }
                     ],
                     temperature: 0.8,
-                    max_tokens: 1200
+                    max_tokens: 450
                 })
             });
 
