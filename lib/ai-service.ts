@@ -14,10 +14,11 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
     "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemini-pro-1.5:free"
+    "google/gemma-3-4b-it:free",
+    "google/gemma-3-27b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "tngtech/deepseek-r1t2-chimera:free"
 ];
 
 export async function generatePollInsights(
