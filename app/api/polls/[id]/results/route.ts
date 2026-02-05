@@ -12,7 +12,7 @@ export async function GET(
     // 1. Get all results for this poll
     const { data: results, error: resultsError } = await supabase
       .from('results')
-      .select('question, friend_id, friends(name), vote_count')
+      .select('question, friend_id, answer_option, friends(name), vote_count')
       .eq('poll_id', id);
 
     if (resultsError) throw resultsError;
@@ -24,8 +24,8 @@ export async function GET(
         if (!organized[result.question]) {
           organized[result.question] = {};
         }
-        const friendName = result.friends?.name || 'Unknown';
-        organized[result.question][friendName] = result.vote_count || 0;
+        const label = result.answer_option ? `${result.answer_option}%` : (result.friends?.name || 'Unknown');
+        organized[result.question][label] = result.vote_count || 0;
       }
     }
 

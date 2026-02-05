@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
+import { PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
 
 
 function getClientIp(request: NextRequest): string {
@@ -84,8 +85,15 @@ export async function POST(request: NextRequest) {
       creatorId = newCreator.id;
     }
 
+    // 1.5 Calculate sequential poll ID for this creator
+    const { count: userPollCount } = await supabase
+      .from('polls')
+      .select('*', { count: 'exact', head: true })
+      .eq('creator_id', creatorId);
 
-    // 2. Create poll
+    const creatorPollId = (userPollCount || 0) + 1;
+
+
     const adminToken = crypto.randomUUID();
     const { data: pollData, error: pollError } = await supabase
       .from('polls')
@@ -94,7 +102,8 @@ export async function POST(request: NextRequest) {
         creator_ip: clientIp,
         question_set: questions,
         status: 'active',
-        admin_token: adminToken
+        admin_token: adminToken,
+        creator_poll_id: creatorPollId
       })
       .select()
       .single();
@@ -103,9 +112,10 @@ export async function POST(request: NextRequest) {
     if (pollError) throw pollError;
 
     // Add friends
-    const friendsData = friends.map((name: string) => ({
+    const friendsData = friends.map((f: any) => ({
       poll_id: pollData.id,
-      name: name.trim(),
+      name: f.name.trim(),
+      gender: f.gender
     }));
 
     const { data: friendsList, error: friendsError } = await supabase
@@ -116,21 +126,42 @@ export async function POST(request: NextRequest) {
     if (friendsError) throw friendsError;
 
     // Initialize results for all questions and friends
-    const resultsData: Array<{
-      poll_id: string;
-      question: string;
-      friend_id: string;
-      vote_count: number;
-    }> = [];
+    const resultsData: any[] = [];
 
     for (const question of questions) {
-      for (const friend of friendsList) {
-        resultsData.push({
-          poll_id: pollData.id,
-          question,
-          friend_id: friend.id,
-          vote_count: 0,
+      // Check if this looks like a Pair Frenzy question
+      // This is a simple check: if it has digits or seems to be from a template
+      const isPairFrenzy = PAIR_FRENZY_QUESTIONS.some(tmpl => {
+        const regex = new RegExp(tmpl.template.replace('{A}', '.*').replace('{B}', '.*'));
+        return regex.test(question);
+      });
+
+      if (isPairFrenzy) {
+        // Get the specific template to find options
+        const tmpl = PAIR_FRENZY_QUESTIONS.find(t => {
+          const regex = new RegExp(t.template.replace('{A}', '.*').replace('{B}', '.*'));
+          return regex.test(question);
         });
+
+        const options = tmpl?.options || [0, 25, 50, 75, 100];
+        for (const opt of options) {
+          resultsData.push({
+            poll_id: pollData.id,
+            question,
+            answer_option: opt.toString(),
+            vote_count: 0,
+          });
+        }
+      } else {
+        // Standard "Who is..." question
+        for (const friend of friendsList) {
+          resultsData.push({
+            poll_id: pollData.id,
+            question,
+            friend_id: friend.id,
+            vote_count: 0,
+          });
+        }
       }
     }
 
@@ -140,7 +171,7 @@ export async function POST(request: NextRequest) {
 
     if (resultsError) throw resultsError;
 
-    return NextResponse.json({ id: pollData.id, adminToken }, { status: 201 });
+    return NextResponse.json({ id: pollData.id, adminToken, creatorPollId }, { status: 201 });
 
   } catch (error: any) {
     console.error('Failed to create poll. Full error:', error);

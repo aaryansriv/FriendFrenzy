@@ -26,6 +26,10 @@ export async function POST(
       );
     }
 
+    const isOptionVote = friendId.startsWith('option:');
+    const optionValue = isOptionVote ? friendId.replace('option:', '') : null;
+    const actualFriendId = isOptionVote ? null : friendId;
+
     // Check if poll exists and is active
     const { data: poll, error: pollFetchError } = await supabase
       .from('polls')
@@ -85,7 +89,8 @@ export async function POST(
       .from('votes')
       .insert({
         poll_id: id,
-        friend_id: friendId,
+        friend_id: actualFriendId,
+        answer_option: optionValue,
         voter_id: voterId,
         question,
         voter_ip: clientIp,
@@ -95,22 +100,35 @@ export async function POST(
     if (voteError) throw voteError;
 
     // Get existing result to increment
-    const { data: existingResult } = await supabase
+    const query = supabase
       .from('results')
       .select('vote_count')
       .eq('poll_id', id)
-      .eq('friend_id', friendId)
-      .eq('question', question)
-      .maybeSingle();
+      .eq('question', question);
+
+    if (isOptionVote) {
+      query.eq('answer_option', optionValue);
+    } else {
+      query.eq('friend_id', friendId);
+    }
+
+    const { data: existingResult } = await query.maybeSingle();
 
     if (existingResult) {
       // Increment existing vote count
-      const { error: updateError } = await supabase
+      const updateQuery = supabase
         .from('results')
         .update({ vote_count: existingResult.vote_count + 1 })
         .eq('poll_id', id)
-        .eq('friend_id', friendId)
         .eq('question', question);
+
+      if (isOptionVote) {
+        updateQuery.eq('answer_option', optionValue);
+      } else {
+        updateQuery.eq('friend_id', friendId);
+      }
+
+      const { error: updateError } = await updateQuery;
 
       if (updateError) throw updateError;
     } else {
@@ -119,7 +137,8 @@ export async function POST(
         .from('results')
         .insert({
           poll_id: id,
-          friend_id: friendId,
+          friend_id: actualFriendId,
+          answer_option: optionValue,
           question,
           vote_count: 1,
         });

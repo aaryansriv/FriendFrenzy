@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
+import { PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
 
 interface Friend {
   id: string;
@@ -50,19 +52,45 @@ export function VotingInterface({ poll, onVotesSubmit, isSubmitting }: VotingInt
               </h3>
 
               <div className="space-y-2">
-                {poll.friends.map(friend => (
-                  <button
-                    key={friend.id}
-                    onClick={() => handleSelect(question, friend.id)}
-                    className={`w-full p-4 rounded-xl font-bold text-left border-2 transition-all flex items-center justify-between ${selections[question] === friend.id
+                {(() => {
+                  const tmpl = PAIR_FRENZY_QUESTIONS.find(t => {
+                    const regex = new RegExp(t.template.replace('{A}', '.*').replace('{B}', '.*'));
+                    return regex.test(question);
+                  });
+
+                  if (tmpl) {
+                    return (
+                      <div className="grid grid-cols-2 gap-2">
+                        {tmpl.options.map(opt => (
+                          <button
+                            key={opt}
+                            onClick={() => handleSelect(question, `option:${opt}`)}
+                            className={`p-4 rounded-xl font-black border-2 transition-all flex items-center justify-center ${selections[question] === `option:${opt}`
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-white text-black border-black/10 hover:border-black'
+                              }`}
+                          >
+                            {opt}%
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  return poll.friends.map(friend => (
+                    <button
+                      key={friend.id}
+                      onClick={() => handleSelect(question, friend.id)}
+                      className={`w-full p-4 rounded-xl font-bold text-left border-2 transition-all flex items-center justify-between ${selections[question] === friend.id
                         ? 'bg-black text-white border-black'
                         : 'bg-white text-black border-black/10 hover:border-black'
-                      }`}
-                  >
-                    <span>{friend.name}</span>
-                    {selections[question] === friend.id && <Check className="w-4 h-4" />}
-                  </button>
-                ))}
+                        }`}
+                    >
+                      <span>{friend.name}</span>
+                      {selections[question] === friend.id && <Check className="w-4 h-4" />}
+                    </button>
+                  ));
+                })()}
               </div>
             </div>
           ))}
@@ -81,6 +109,3 @@ export function VotingInterface({ poll, onVotesSubmit, isSubmitting }: VotingInt
     </div>
   );
 }
-
-import { Check } from 'lucide-react';
-

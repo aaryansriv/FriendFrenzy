@@ -1,9 +1,10 @@
 export interface CreatePollRequest {
   creatorName: string;
   email: string;
-  friends: string[];
+  friends: { name: string; gender: string }[];
   questions: string[];
 }
+
 
 
 

@@ -1,83 +1,134 @@
-export const POLL_QUESTIONS = [
-  // Relationship & Romance
-  'Who will get married first?',
-  'Who is most likely to get divorced?',
-  'Who is most likely to have a secret crush?',
-  'Who would be the best kisser?',
-  'Who is most likely to cheat?',
-  'Who would be the worst romantic partner?',
-  'Who would make the best wife/husband?',
-  'Who would you trust with a secret?',
-  'Who is most likely to end up alone?',
+// friendFrenzyQuestions.ts
+// Centralized question bank for FriendFrenzy
 
-  // Party & Social
-  'Who would be the best wingman/wingwoman?',
-  'Who is most likely to drunk-text their ex?',
-  'Who gets drunk the fastest?',
-  'Who would be the best party host?',
-  'Who is most likely to start drama at a party?',
-  'Who would be the worst dancer?',
-  'Who is most likely to hook up at a party?',
-  'Who would be the most fun on a road trip?',
-  'Who is most likely to be hungover the next day?',
+export enum QuestionCategory {
+  NAUGHTY_18_PLUS = "naughty_18_plus",
+  PARTY_SOCIAL = "party_social",
+  MIXED = "mixed",
+  PAIR_FRENZY = "pair_frenzy",
+}
 
-  // Survival & Adventure
-  'Who would survive longest in a zombie apocalypse?',
-  'Who would be best in a survival situation?',
-  'Who would panic the most in an emergency?',
-  'Who would make the best wilderness guide?',
-  'Who is most likely to get lost?',
-  'Who would be the best at camping?',
-  'Who would give up first on a difficult hike?',
-
-  // Success & Money
-  'Who will be the richest?',
-  'Who will be the most successful?',
-  'Who is most likely to be broke forever?',
-  'Who would be best at making money?',
-  'Who is most likely to win the lottery?',
-  'Who would be the worst with money?',
-  'Who will retire the earliest?',
-
-  // Skills & Talents
-  'Who has the best singing voice?',
-  'Who would be the worst singer?',
-  'Who is the best cook?',
-  'Who would be the worst cook?',
-  'Who has the most unique talent?',
-  'Who is the most athletic?',
-  'Who is the least athletic?',
-  'Who would be the best artist?',
-
-  // Personality & Quirks
-  'Who has the biggest secret?',
-  'Who is the biggest gossip?',
-  'Who is the most annoying?',
-  'Who is the most humble?',
-  'Who is the most arrogant?',
-  'Who is the weirdest?',
-  'Who is the most normal?',
-  'Who would annoy you the most on a long trip?',
-  'Who is the biggest liar?',
-  'Who is the most trustworthy?',
-
-  // Life Choices
-  'Who would make the best parent?',
-  'Who would be the worst parent?',
-  'Who would have the most kids?',
-  'Who would have no kids?',
-  'Who is most likely to move far away?',
-  'Who would stay in the same place forever?',
-  'Who would go back to school?',
-
-  // Fun & Silly
-  'Who would be best at hide and seek?',
-  'Who would be worst at hide and seek?',
-  'Who would win in an arm wrestle?',
-  'Who would win in a fight?',
-  'Who would cry at a sad movie?',
-  'Who would laugh at their own jokes?',
-  'Who snores the loudest?',
-  'Who sleeps the most?',
-  'Who sleeps the least?',
+/* ---------------------------------------------------
+   😈 NAUGHTY 18+ (Flirty, Playful, Non-Explicit)
+--------------------------------------------------- */
+export const NAUGHTY_18_PLUS_QUESTIONS: string[] = [
+  "Who has the most hidden rizz?",
+  "Who would flirt even without realizing it?",
+  "Who catches feelings the fastest?",
+  "Who is lowkey the most attractive?",
+  "Who gives strong situationship energy?",
+  "Who would be hardest to ignore?",
+  "Who enjoys attention a little too much?",
+  "Who pretends to be innocent but isn’t?",
+  "Who would make someone fall accidentally?",
+  "Who would thrive on a dating app?",
+  "Who is secretly very confident?",
+  "Who would enjoy being chased?",
+  "Who has the best eye contact game?",
+  "Who would win at flirting without trying?",
+  "Who gives main-character-in-romance vibes?",
 ];
+
+/* ---------------------------------------------------
+   🍻 PARTY & SOCIAL LIFE
+--------------------------------------------------- */
+export const PARTY_SOCIAL_QUESTIONS: string[] = [
+  "Who turns ‘one drink’ into a whole night?",
+  "Who always knows where the party is?",
+  "Who disappears mid-party?",
+  "Who would drunk-text someone?",
+  "Who gets tipsy the fastest?",
+  "Who wakes up with the worst hangover?",
+  "Who is the life of the party?",
+  "Who somehow ends up in drama?",
+  "Who would dance like nobody’s watching?",
+  "Who would lose their phone on a night out?",
+  "Who would suggest after-party plans?",
+  "Who would sneak out without telling anyone?",
+  "Who parties hard but recovers fast?",
+  "Who is surprisingly responsible when drunk?",
+  "Who would say ‘last drink’ and mean none of it?",
+];
+
+/* ---------------------------------------------------
+   🌀 MIXED BAG (Safe + Fun)
+--------------------------------------------------- */
+export const MIXED_QUESTIONS: string[] = [
+  "Who gives main character energy?",
+  "Who would survive a zombie apocalypse?",
+  "Who is secretly very smart?",
+  "Who is emotionally the strongest?",
+  "Who would move abroad someday?",
+  "Who has the best overall vibes?",
+  "Who is the most dependable?",
+  "Who would handle fame the best?",
+  "Who is surprisingly mature?",
+  "Who would thrive in chaos?",
+  "Who would be successful in anything?",
+  "Who stays calm under pressure?",
+  "Who is lowkey very ambitious?",
+  "Who would make a great leader?",
+  "Who has the most balanced life?",
+];
+
+/* ---------------------------------------------------
+   🔗 PAIR FRENZY (%-Based, Two-Name Questions)
+--------------------------------------------------- */
+
+export interface PairFrenzyQuestion {
+  template: string;
+  options: number[];
+}
+
+export const PAIR_FRENZY_QUESTIONS: PairFrenzyQuestion[] = [
+  {
+    template: "What are the chances that {A} has a crush on {B}?",
+    options: [10, 25, 50, 75, 90],
+  },
+  {
+    template: "How likely is it that {A} secretly stalks {B}?",
+    options: [0, 20, 40, 60, 80],
+  },
+  {
+    template: "What are the odds that {A} would flirt with {B}?",
+    options: [10, 30, 50, 70, 90],
+  },
+  {
+    template: "How likely is it that {A} gets jealous if {B} dates someone?",
+    options: [5, 25, 50, 75, 95],
+  },
+  {
+    template: "What are the chances that {A} and {B} would actually vibe?",
+    options: [20, 40, 60, 80, 100],
+  },
+  {
+    template: "How likely is it that {A} talks about {B} to others?",
+    options: [10, 30, 50, 70, 90],
+  },
+  {
+    template: "What are the odds that {A} would defend {B} in a fight?",
+    options: [20, 40, 60, 80, 100],
+  },
+  {
+    template: "How likely is it that {A} finds {B} annoying but won’t admit it?",
+    options: [10, 30, 50, 70, 90],
+  },
+  {
+    template: "What are the chances that {A} trusts {B} the most?",
+    options: [15, 35, 55, 75, 95],
+  },
+  {
+    template: "How likely is it that {A} would choose {B} over others?",
+    options: [10, 25, 50, 75, 100],
+  },
+];
+
+/* ---------------------------------------------------
+   📦 EXPORT ALL QUESTIONS BY CATEGORY
+--------------------------------------------------- */
+export const QUESTION_BANK = {
+  [QuestionCategory.NAUGHTY_18_PLUS]: NAUGHTY_18_PLUS_QUESTIONS,
+  [QuestionCategory.PARTY_SOCIAL]: PARTY_SOCIAL_QUESTIONS,
+  [QuestionCategory.MIXED]: MIXED_QUESTIONS,
+  [QuestionCategory.PAIR_FRENZY]: PAIR_FRENZY_QUESTIONS,
+};
