@@ -78,3 +78,28 @@ export async function getResults(
 
   return response.json();
 }
+
+export interface AIInsights {
+  friendJudgments: { name: string; judgment: string }[];
+  songDedications: {
+    name: string;
+    song: string;
+    artist: string;
+    vibe: string;
+    reason: string;
+  }[];
+  groupVerdict: { summary: string };
+  pairCommentaries: { pair: string; commentary: string }[];
+  message?: string;
+  isClosed?: boolean;
+}
+
+export async function getAIInsights(pollId: string, force?: boolean): Promise<AIInsights> {
+  const url = `/api/polls/${pollId}/ai-insights${force ? '?force=true' : ''}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.details || errorData.error || 'Failed to fetch AI insights');
+  }
+  return response.json();
+}

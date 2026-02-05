@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Poll, getPoll, getResults } from '@/lib/api';
-import { Loader2, Users, BarChart2, Share2, Crown, Lock, Unlock, Calendar, Trash2, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, BarChart2, Share2, Crown, Lock, Unlock, Calendar, Trash2, ArrowLeft, Sparkles, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ResultsDisplay } from '@/components/results-display';
 
 export default function DashboardPage() {
     const params = useParams();
@@ -112,8 +113,6 @@ export default function DashboardPage() {
     return (
         <main className="min-h-screen bg-white p-8 md:p-12 relative">
             <div className="max-w-6xl mx-auto space-y-12">
-
-
                 {/* Header */}
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-black/10 pb-12">
                     <div className="space-y-2">
@@ -138,7 +137,7 @@ export default function DashboardPage() {
                 </header>
 
                 {/* Stats Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     <div className="bg-black text-white p-8 rounded-3xl space-y-2">
                         <Users className="w-8 h-8 opacity-50" />
                         <p className="text-sm font-bold opacity-60">Total Users Voted</p>
@@ -178,11 +177,50 @@ export default function DashboardPage() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* AI Analytics Card */}
+                    <div className={`bg-indigo-600 text-white p-8 rounded-3xl space-y-4 shadow-xl transition-all ${poll.status === 'closed' ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
+                        <div className="flex items-center justify-between">
+                            <Sparkles className="w-8 h-8 text-indigo-300" />
+                            <span className="text-[10px] font-black bg-white/20 px-3 py-1 rounded-full uppercase">Frenzy AI Active</span>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-xs font-black uppercase tracking-widest text-indigo-200">The Social Oracle</p>
+                            <h3 className="text-2xl font-black italic">Frenzy AI Verdict</h3>
+                        </div>
+                        <p className="text-sm font-medium text-indigo-100">
+                            {poll.status === 'closed'
+                                ? 'Your squad roasts and playlist are ready to drop!'
+                                : 'Unlock the verdict by closing the poll.'}
+                        </p>
+                        {poll.status === 'closed' && (
+                            <div className="flex flex-col gap-2 pt-2">
+                                <Button
+                                    onClick={() => {
+                                        const el = document.getElementById('ai-preview');
+                                        el?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="bg-white text-indigo-600 hover:bg-indigo-50 font-black rounded-xl h-10 w-full text-xs"
+                                >
+                                    View Report Preview
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        const text = encodeURIComponent(`OMG! The Frenzy AI just COOKED our squad! 💀 Check the leaks and the playlist: ${window.location.origin}/poll/${pollId}`);
+                                        window.open(`https://wa.me/?text=${text}`, '_blank');
+                                    }}
+                                    className="bg-indigo-500 hover:bg-indigo-400 text-white font-black rounded-xl h-10 w-full text-xs flex items-center justify-center gap-2"
+                                >
+                                    <Share2 className="w-3 h-3" /> Share Roast with Squad
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Questions Detail */}
                 <div className="space-y-8">
-                    <h2 className="text-3xl font-black">Live Results</h2>
+                    <h2 className="text-3xl font-black">Admin Questions View</h2>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {poll.questions.map((question, idx) => {
                             const qResults = results[question] || {};
@@ -227,6 +265,27 @@ export default function DashboardPage() {
                         })}
                     </div>
                 </div>
+
+                {/* AI / Public Preview Section */}
+                {poll.status === 'closed' && (
+                    <div id="ai-preview" className="space-y-8 pt-12 border-t border-black/10">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-3xl font-black italic flex items-center gap-3">
+                                <Eye className="w-8 h-8 text-indigo-600" /> FULL PUBLIC REPORT
+                            </h2>
+                            <p className="text-black/40 font-bold text-sm uppercase tracking-widest">Previewing what users see</p>
+                        </div>
+                        <div className="border-8 border-indigo-600 rounded-[3.5rem] overflow-hidden shadow-2xl scale-[0.98] hover:scale-100 transition-transform duration-500">
+                            <ResultsDisplay
+                                pollId={pollId}
+                                questions={poll.questions}
+                                allResults={results}
+                                isClosed={true}
+                                isAdmin={true}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
         </main>
     );

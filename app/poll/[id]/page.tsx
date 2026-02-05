@@ -93,15 +93,23 @@ export default function PollPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleBulkSubmit = async (votes: Record<string, string>) => {
+  const handleBulkSubmit = async (votes: Record<string, string>, confession?: string) => {
     if (!poll || !voterId) return;
     setIsSubmitting(true);
     try {
       setVoteError(null);
       // Submit each vote
-      // In a real app, we'd have a bulk API, but for now we iterate
       for (const [question, friendId] of Object.entries(votes)) {
         await submitVote(pollId, friendId, question, voterId);
+      }
+
+      // Submit confession if exists
+      if (confession && confession.trim()) {
+        await fetch(`/api/polls/${pollId}/confessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confession }),
+        });
       }
 
       setShowConfetti(true);
@@ -147,6 +155,20 @@ export default function PollPage() {
     );
   }
 
+  // If closed, show results immediately
+  if (poll.status === 'closed') {
+    return (
+      <main className="min-h-screen bg-white relative">
+        <ResultsDisplay
+          pollId={pollId}
+          questions={poll.questions}
+          allResults={allResults}
+          isClosed={true}
+        />
+      </main>
+    );
+  }
+
   // Identity Selection Step
   if (!voterId && !votedQuestions.size) {
     return (
@@ -186,8 +208,10 @@ export default function PollPage() {
 
       {allQuestionsAnswered ? (
         <ResultsDisplay
+          pollId={pollId}
           questions={poll.questions}
           allResults={allResults}
+          isClosed={poll.status === 'closed'}
         />
       ) : (
         <VotingInterface
