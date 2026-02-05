@@ -14,9 +14,10 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
+    "meta-llama/llama-3.2-3b-instruct:free",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemma-3-27b-it:free"
+    "google/gemma-3-4b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free"
 ];
 
 export async function generatePollInsights(
@@ -28,7 +29,8 @@ export async function generatePollInsights(
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     console.log(`AI_SERVICE: Starting analysis for ${friends.length} friends...`);
-    console.log(`AI_SERVICE: API Key detected: ${!!apiKey} (${apiKey?.substring(0, 8)}...)`);
+    console.log(`AI_SERVICE: Found ${results.length} vote entries.`);
+    console.log(`AI_SERVICE: API Key detected: ${!!apiKey}`);
 
     if (!apiKey) {
         console.error("AI_SERVICE: OPENROUTER_API_KEY is missing from process.env");
@@ -229,7 +231,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                         { role: "user", content: userPrompt }
                     ],
                     temperature: 0.8,
-                    max_tokens: 1500
+                    max_tokens: 800
                 })
             });
 
