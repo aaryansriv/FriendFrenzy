@@ -15,6 +15,7 @@ export interface AIServiceResponse {
 
 const MODELS_TO_TRY = [
     "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
     "meta-llama/llama-3.2-3b-instruct:free",
     "google/gemma-3-4b-it:free",
     "tngtech/deepseek-r1t2-chimera:free"
@@ -208,7 +209,8 @@ If a joke might genuinely hurt someone in real life, rewrite it to target behavi
 
 ULTRA-STRICT SPEED RULES:
 - BE EXTREMELY BRIEF.
-- TOTAL OUTPUT MUST BE UNDER 300 TOKENS.
+- DO NOT EXPLAIN. DO NOT THINK OUT LOUD.
+- TOTAL JSON OUTPUT MUST BE UNDER 300 TOKENS.
 - NO FLUFFER. JUST RAW DATA.
 `;
 
@@ -236,7 +238,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                         { role: "user", content: userPrompt }
                     ],
                     temperature: 0.8,
-                    max_tokens: 450
+                    max_tokens: 1000
                 })
             });
 
