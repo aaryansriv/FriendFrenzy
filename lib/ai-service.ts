@@ -43,19 +43,18 @@ export async function generatePollInsights(
     const categories: Record<string, string[]> = {};
 
     results.forEach(r => {
-        const name = (Array.isArray(r.friends) ? r.friends[0]?.name : r.friends?.name) || 'Unknown';
-        if (!name || name === 'Unknown') return;
+        // Handle BOTH friend names and percentage options
+        const name = r.answer_option ? `${r.answer_option}%` : (r.friends?.name || 'Unknown');
+        if (name === 'Unknown') return;
+
         dominance[name] = (dominance[name] || 0) + (r.vote_count || 0);
-        if (r.category) {
-            if (!categories[name]) categories[name] = [];
-            categories[name].push(r.category);
-        }
     });
+
+    console.log(`AI_SERVICE: Extracted dominance map:`, dominance);
 
     const pollSummary = {
         friends: friends.map(f => f.name),
         dominance,
-        categories,
         topDog: Object.entries(dominance).sort((a, b) => b[1] - a[1])[0] || ["None", 0],
         ghost: Object.entries(dominance).sort((a, b) => a[1] - b[1])[0] || ["None", 0],
         confessions

@@ -10,20 +10,23 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://friendfrenzy.vercel.app'),
   title: 'Friend Frenzy - Anonymous Friend Polls',
-  description: 'Create hilarious anonymous polls about your friends. See what people really think with game-show style reveals!',
+  description: 'Create hilarious anonymous polls about your friends. See what people really think with game-show style reveals and AI roasts!',
   generator: 'v0.app',
   themeColor: '#0f0a1a',
   openGraph: {
-    title: 'Friend Frenzy',
-    description: 'Create hilarious anonymous polls about your friends',
+    title: 'Friend Frenzy | The Ultimate Roast Platform',
+    description: 'Anonymous polls, brutal AI roasts, and squad playlists. Nobody is safe.',
+    url: 'https://friendfrenzy.vercel.app',
+    siteName: 'Friend Frenzy',
     type: 'website',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Friend Frenzy',
-    description: 'Anonymous polls about your friends',
+    description: 'The leaks are out. Create anonymous polls about your friends and let the AI roast them.',
   },
   icons: {
     icon: [
