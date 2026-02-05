@@ -244,8 +244,9 @@ ${JSON.stringify(pollSummary, null, 2)}
             }
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`AI_SERVICE: Model ${model} failed (${response.status}):`, errorText);
+                const errorBody = await response.text();
+                console.error(`AI_SERVICE: Model ${model} FAILED with status ${response.status}`);
+                console.error(`AI_SERVICE: Error Details: ${errorBody}`);
                 continue;
             }
 
