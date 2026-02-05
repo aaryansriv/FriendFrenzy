@@ -25,72 +25,84 @@ export async function GET(
             console.error("AI_ROUTE: SUPABASE_SERVICE_ROLE_KEY is missing! Site data queries will fail.");
         }
 
-        // 1. Check if insights already exist
-        const { data: existingInsights } = await supabase
-            .from('poll_ai_insights')
-            .select('insights')
+        // 1. Check current status in our new tracking table
+        const { data: report } = await supabase
+            .from('poll_ai_reports')
+            .select('*')
             .eq('poll_id', id)
             .maybeSingle();
 
-        if (existingInsights && existingInsights.insights) {
-            const insights = existingInsights.insights;
-            const isCachedFallback = (insights as any).friendJudgments?.some((j: any) =>
-                j.judgment.includes('FALLBACK_GENERATION')
-            );
+        // 2. If it's already completed and we aren't forcing, return it
+        if (report?.status === 'completed' && !force) {
+            console.log(`AI_ROUTE: Serving completed report for ${id}`);
+            return NextResponse.json(report.insights);
+        }
 
-            // If we have real insights, or we have fallback but aren't forcing, return them
-            if (!isCachedFallback || !force) {
-                console.log(`AI_ROUTE: Returning ${isCachedFallback ? 'fallback' : 'real'} insights for ${id}`);
-                return NextResponse.json(insights);
+        // 3. If it's processing and we aren't forcing, tell the client to keep polling
+        if (report?.status === 'processing' && !force) {
+            console.log(`AI_ROUTE: Report for ${id} is still processing...`);
+            return NextResponse.json({ status: 'processing', message: 'The AI is cooking...' });
+        }
+
+        // 4. Force Generation or Start New Generation
+        if (force || !report) {
+            console.log(`AI_ROUTE: Starting FRESH generation for poll ${id}`);
+
+            // Immediately mark as processing in DB so other polls don't trigger it
+            await supabase.from('poll_ai_reports').upsert({
+                poll_id: id,
+                status: 'processing',
+                updated_at: new Date().toISOString()
+            });
+
+            // GATHER DATA (Optimized)
+            const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
+                supabase.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
+                supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
+                supabase.from('friends').select('id, name, gender').eq('poll_id', id),
+                supabase.from('confessions').select('confession_text').eq('poll_id', id)
+            ]);
+
+            if (pollRes.error || !pollRes.data) return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
+
+            try {
+                const insights = await generatePollInsights(
+                    { ...pollRes.data, creator_name: (pollRes.data as any).creators?.name },
+                    resultsRes.data || [],
+                    friendsRes.data || [],
+                    confessionsRes.data?.map((c: any) => c.confession_text) || []
+                );
+
+                const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
+
+                if (!isFallback) {
+                    console.log(`AI_ROUTE: Successfully generated insights for ${id}. Saving to DB...`);
+                    const { error: saveError } = await supabase.from('poll_ai_reports').upsert({
+                        poll_id: id,
+                        status: 'completed',
+                        insights: insights,
+                        updated_at: new Date().toISOString()
+                    });
+
+                    if (saveError) console.error("AI_ROUTE: DB Save Error:", saveError);
+                    return NextResponse.json(insights);
+                } else {
+                    console.warn(`AI_ROUTE: AI returned fallback for ${id}. Not saving.`);
+                    return NextResponse.json(insights);
+                }
+            } catch (err: any) {
+                console.error(`AI_ROUTE: Critical failure for ${id}:`, err);
+                await supabase.from('poll_ai_reports').upsert({
+                    poll_id: id,
+                    status: 'failed',
+                    error_message: err.message,
+                    updated_at: new Date().toISOString()
+                });
+                throw err;
             }
         }
 
-        // 2. If no insights exist AND we aren't forcing, return "processing"
-        // This is the key fix: Polling should NOT trigger a fresh generation
-        if (!force) {
-            console.log(`AI_ROUTE: Insights not ready for ${id}, client should keep polling.`);
-            return NextResponse.json({
-                status: 'processing',
-                message: 'AI is still cooking those roasts...'
-            });
-        }
-
-        // 3. Force Generation Logic (only happens when user clicks button)
-        console.log(`AI_ROUTE: Triggering forced AI generation for ${id}`);
-
-        const { data: poll, error: pollError } = await supabase
-            .from('polls')
-            .select('status, question_set, creators(name)')
-            .eq('id', id)
-            .single();
-
-        if (pollError || !poll) return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
-        if (poll.status !== 'closed') return NextResponse.json({ message: 'Poll active', isClosed: false });
-
-        const [results, friends, confessions] = await Promise.all([
-            supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
-            supabase.from('friends').select('id, name, gender').eq('poll_id', id),
-            supabase.from('confessions').select('confession_text').eq('poll_id', id)
-        ]);
-
-        const insights = await generatePollInsights(
-            { ...poll, creator_name: (poll as any).creators?.name },
-            results.data || [],
-            friends.data || [],
-            confessions.data?.map((c: any) => c.confession_text) || []
-        );
-
-        const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
-
-        if (!isFallback) {
-            console.log(`AI_ROUTE: Success! Saving real insights to Supabase for ${id}`);
-            await supabase.from('poll_ai_insights').upsert({
-                poll_id: id,
-                insights: insights
-            }, { onConflict: 'poll_id' });
-        }
-
-        return NextResponse.json(insights);
+        return NextResponse.json({ status: 'processing' });
 
     } catch (error: any) {
         console.error('AI Insights Route Error:', error);
