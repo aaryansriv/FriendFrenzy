@@ -14,10 +14,10 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "google/gemini-flash-1.5-8b:free"
+    "google/gemini-pro-1.5:free"
 ];
 
 export async function generatePollInsights(
@@ -233,7 +233,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                         { role: "user", content: userPrompt }
                     ],
                     temperature: 0.8,
-                    max_tokens: 800
+                    max_tokens: 1200
                 })
             });
 
@@ -256,7 +256,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                 continue;
             }
 
-            console.log(`AI_SERVICE: Model ${model} SUCCESS. Content length: ${content.length}`);
+            console.log(`AI_SERVICE: Model ${model} SUCCESS. Length: ${content.length}`);
 
             // Cleanup JSON string
             content = content.trim();
@@ -268,7 +268,12 @@ ${JSON.stringify(pollSummary, null, 2)}
                 content = content.replace(/^```json/, "").replace(/^```/, "").replace(/```$/, "").trim();
             }
 
-            return JSON.parse(content);
+            try {
+                return JSON.parse(content);
+            } catch (parseError) {
+                console.error(`AI_SERVICE: JSON Parse Error for model ${model}. Raw content:`, content);
+                continue;
+            }
         } catch (error) {
             console.error(`AI_SERVICE: Exception with model ${model}:`, error);
             continue;
