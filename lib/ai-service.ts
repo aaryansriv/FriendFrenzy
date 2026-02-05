@@ -14,10 +14,9 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
-    "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "google/gemma-3-27b-it:free",
-    "mistralai/mistral-small-3.1-24b-instruct:free"
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-3-27b-it:free"
 ];
 
 export async function generatePollInsights(
