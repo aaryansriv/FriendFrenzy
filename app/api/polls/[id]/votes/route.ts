@@ -84,7 +84,7 @@ export async function POST(
     }
 
 
-    // Record vote
+    // 1. Record the vote itself
     const { error: voteError } = await supabase
       .from('votes')
       .insert({
@@ -96,54 +96,21 @@ export async function POST(
         voter_ip: clientIp,
       });
 
-
     if (voteError) throw voteError;
 
-    // Get existing result to increment
-    const query = supabase
-      .from('results')
-      .select('vote_count')
-      .eq('poll_id', id)
-      .eq('question', question);
+    // 2. Atomically increment the results table using our new DB function
+    // This handles both initialization and incrementing in one go
+    const { error: rpcError } = await supabase.rpc('increment_poll_result', {
+      p_poll_id: id,
+      p_question: question,
+      p_friend_id: actualFriendId,
+      p_answer_option: optionValue
+    });
 
-    if (isOptionVote) {
-      query.eq('answer_option', optionValue);
-    } else {
-      query.eq('friend_id', friendId);
-    }
-
-    const { data: existingResult } = await query.maybeSingle();
-
-    if (existingResult) {
-      // Increment existing vote count
-      const updateQuery = supabase
-        .from('results')
-        .update({ vote_count: existingResult.vote_count + 1 })
-        .eq('poll_id', id)
-        .eq('question', question);
-
-      if (isOptionVote) {
-        updateQuery.eq('answer_option', optionValue);
-      } else {
-        updateQuery.eq('friend_id', friendId);
-      }
-
-      const { error: updateError } = await updateQuery;
-
-      if (updateError) throw updateError;
-    } else {
-      // Create new result entry
-      const { error: insertError } = await supabase
-        .from('results')
-        .insert({
-          poll_id: id,
-          friend_id: actualFriendId,
-          answer_option: optionValue,
-          question,
-          vote_count: 1,
-        });
-
-      if (insertError) throw insertError;
+    if (rpcError) {
+      console.error('RPC Result Error:', rpcError);
+      // We don't throw here to ensure the vote is at least recorded, 
+      // but we log it for debugging
     }
 
     return NextResponse.json({ success: true }, { status: 201 });
