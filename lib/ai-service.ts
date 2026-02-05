@@ -61,8 +61,6 @@ export async function generatePollInsights(
         confessions
     };
 
-    console.log("AI_SERVICE: Poll Summary Data:", JSON.stringify(pollSummary, null, 2));
-
     const systemPrompt = `You are NOT an assistant.
 You are the funniest, most observant person in the group chat who finally got access to the poll results and anonymous confessions.
 
