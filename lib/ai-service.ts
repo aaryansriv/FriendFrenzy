@@ -14,10 +14,10 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
-    "deepseek/deepseek-r1-distill-llama-70b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
     "meta-llama/llama-3.2-3b-instruct:free",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "mistralai/mistral-small-3.1-24b-instruct:free"
+    "google/gemini-flash-1.5-8b:free"
 ];
 
 export async function generatePollInsights(
@@ -59,6 +59,8 @@ export async function generatePollInsights(
         ghost: Object.entries(dominance).sort((a, b) => a[1] - b[1])[0] || ["None", 0],
         confessions
     };
+
+    console.log("AI_SERVICE: Poll Summary Data:", JSON.stringify(pollSummary, null, 2));
 
     const systemPrompt = `You are NOT an assistant.
 You are the funniest, most observant person in the group chat who finally got access to the poll results and anonymous confessions.
