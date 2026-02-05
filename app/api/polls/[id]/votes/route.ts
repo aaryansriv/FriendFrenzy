@@ -89,7 +89,7 @@ export async function POST(
       .from('votes')
       .insert({
         poll_id: id,
-        friend_id: actualFriendId,
+        target_friend_id: actualFriendId,
         answer_option: optionValue,
         voter_id: voterId,
         question,
@@ -99,7 +99,6 @@ export async function POST(
     if (voteError) throw voteError;
 
     // 2. Atomically increment the results table using our new DB function
-    // This handles both initialization and incrementing in one go
     const { error: rpcError } = await supabase.rpc('increment_poll_result', {
       p_poll_id: id,
       p_question: question,
@@ -109,8 +108,6 @@ export async function POST(
 
     if (rpcError) {
       console.error('RPC Result Error:', rpcError);
-      // We don't throw here to ensure the vote is at least recorded, 
-      // but we log it for debugging
     }
 
     return NextResponse.json({ success: true }, { status: 201 });
