@@ -27,21 +27,23 @@ export async function GET(
 
         // 1. Check current status in our new tracking table
         const { data: report } = await supabase
-            .from('poll_ai_reports')
+            .from('poll_ai_insights')
             .select('*')
             .eq('poll_id', id)
             .maybeSingle();
 
+        const insights = report?.insights;
+
         // 2. If it's already completed and we aren't forcing, return it
-        if (report?.status === 'completed' && !force) {
-            console.log(`AI_ROUTE: Serving completed report for ${id}`);
-            return NextResponse.json(report.insights);
+        if (insights?.status === 'completed' && !force) {
+            console.log(`AI_ROUTE: Serving completed insights for ${id}`);
+            return NextResponse.json(insights);
         }
 
         // 3. If it's processing and we aren't forcing, tell the client to keep polling
-        if (report?.status === 'processing' && !force) {
+        if (insights?.status === 'processing' && !force) {
             console.log(`AI_ROUTE: Report for ${id} is still processing...`);
-            return NextResponse.json({ status: 'processing', message: 'The AI is cooking...' });
+            return NextResponse.json(insights);
         }
 
         // 4. Force Generation or Start New Generation
@@ -49,11 +51,11 @@ export async function GET(
             console.log(`AI_ROUTE: Starting FRESH generation for poll ${id}`);
 
             // Immediately mark as processing in DB so other polls don't trigger it
-            await supabase.from('poll_ai_reports').upsert({
+            await supabase.from('poll_ai_insights').upsert({
                 poll_id: id,
-                status: 'processing',
+                insights: { status: 'processing', message: 'The AI is cooking...' },
                 updated_at: new Date().toISOString()
-            });
+            }, { onConflict: 'poll_id' });
 
             // GATHER DATA (Optimized)
             const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
@@ -77,27 +79,32 @@ export async function GET(
 
                 if (!isFallback) {
                     console.log(`AI_ROUTE: Successfully generated insights for ${id}. Saving to DB...`);
-                    const { error: saveError } = await supabase.from('poll_ai_reports').upsert({
+                    const finalInsights = { ...insights, status: 'completed' };
+                    const { error: saveError } = await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
-                        status: 'completed',
-                        insights: insights,
+                        insights: finalInsights,
                         updated_at: new Date().toISOString()
-                    });
+                    }, { onConflict: 'poll_id' });
 
                     if (saveError) console.error("AI_ROUTE: DB Save Error:", saveError);
-                    return NextResponse.json(insights);
+                    return NextResponse.json(finalInsights);
                 } else {
-                    console.warn(`AI_ROUTE: AI returned fallback for ${id}. Not saving.`);
-                    return NextResponse.json(insights);
+                    console.warn(`AI_ROUTE: AI returned fallback for ${id}. Saving fallback to stop poller.`);
+                    const fallbackData = { ...insights, status: 'failed' };
+                    await supabase.from('poll_ai_insights').upsert({
+                        poll_id: id,
+                        insights: fallbackData,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'poll_id' });
+                    return NextResponse.json(fallbackData);
                 }
             } catch (err: any) {
                 console.error(`AI_ROUTE: Critical failure for ${id}:`, err);
-                await supabase.from('poll_ai_reports').upsert({
+                await supabase.from('poll_ai_insights').upsert({
                     poll_id: id,
-                    status: 'failed',
-                    error_message: err.message,
+                    insights: { status: 'failed', error: err.message },
                     updated_at: new Date().toISOString()
-                });
+                }, { onConflict: 'poll_id' });
                 throw err;
             }
         }

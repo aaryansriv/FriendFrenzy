@@ -28,43 +28,59 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
       setLoadingAI(true);
 
       try {
+        console.log(`AI_UI: Requesting ${isForced ? 'forced ' : ''}insights for ${pollId}`);
         const data = await getAIInsights(pollId, isForced);
 
-        // Check if we got a fallback (processing) response
+        const status = (data as any).status;
         const isFallback = data.friendJudgments?.some((j: any) => j.judgment.includes('FALLBACK_GENERATION'));
 
-        if (!data.message && !isFallback) {
+        console.log(`AI_UI: Received status: ${status}, isFallback: ${isFallback}`);
+
+        if (status === 'completed' && !isFallback) {
+          console.log("AI_UI: Insights successfully loaded!");
           setAiInsights(data);
           setLoadingAI(false);
           if (pollInterval) clearInterval(pollInterval);
-        } else if (isForced || isFallback) {
-          // If the server returned a fallback, we must keep polling until the REAL ones appear
+        } else if (status === 'processing' || isForced || isFallback) {
+          // If the server is still processing, or we got a fallback, we must keep polling
           if (!pollInterval) {
-            console.log("AI_UI: Starting poll for insights...");
+            console.log("AI_UI: Starting poll loop...");
             pollInterval = setInterval(async () => {
               pollCount++;
               console.log(`AI_UI: Polling attempt ${pollCount}/${MAX_POLLS}`);
 
               if (pollCount >= MAX_POLLS) {
-                console.log("AI_UI: Max polls reached.");
+                console.log("AI_UI: Max polls reached. Stopping loader.");
                 clearInterval(pollInterval);
                 setLoadingAI(false);
                 return;
               }
 
-              // Poll WITHOUT forcing, so it just reads from Supabase
-              const pollData = await getAIInsights(pollId, false);
-              const isStillFallback = pollData.friendJudgments?.some((j: any) => j.judgment.includes('FALLBACK_GENERATION'));
+              try {
+                // Poll WITHOUT forcing, so it just reads from Supabase
+                const pollData = await getAIInsights(pollId, false);
+                const pollStatus = (pollData as any).status;
 
-              if (!pollData.message && !isStillFallback) {
-                console.log("AI_UI: Real insights found!");
-                setAiInsights(pollData);
-                setLoadingAI(false);
-                clearInterval(pollInterval);
+                if (pollStatus === 'completed') {
+                  console.log("AI_UI: Real insights found leading to UI update!");
+                  setAiInsights(pollData);
+                  setLoadingAI(false);
+                  clearInterval(pollInterval);
+                } else if (pollStatus === 'failed') {
+                  console.log("AI_UI: AI specifically marked as failed in DB.");
+                  setAiInsights(pollData);
+                  setLoadingAI(false);
+                  clearInterval(pollInterval);
+                }
+              } catch (err) {
+                console.error("AI_UI: Poller error:", err);
               }
             }, 3000); // Check every 3 seconds
           }
         } else {
+          // If already completed but fallback, or unknown, stop loading
+          console.log("AI_UI: Reached end of logic, stopping loader.");
+          if (data.friendJudgments) setAiInsights(data);
           setLoadingAI(false);
         }
       } catch (err: any) {
