@@ -86,7 +86,7 @@ export async function GET(
         );
 
         // 5. Cache insights in Supabase - ONLY if not a fallback
-        const isFallback = insights.friendJudgments.some(j => j.judgment.includes('somehow avoided attention') || j.judgment.includes('total mystery'));
+        const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
         if (!isFallback) {
             const { error: insertError } = await supabase

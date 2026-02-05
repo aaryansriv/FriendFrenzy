@@ -14,10 +14,10 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
+    "deepseek/deepseek-r1-distill-llama-70b:free",
     "meta-llama/llama-3.2-3b-instruct:free",
     "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "google/gemma-3-4b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free"
+    "mistralai/mistral-small-3.1-24b-instruct:free"
 ];
 
 export async function generatePollInsights(
@@ -281,7 +281,7 @@ function getFallbackInsights(friends: any[]): AIServiceResponse {
     return {
         friendJudgments: friends.map(f => ({
             name: f.name,
-            judgment: `${f.name} somehow avoided attention and responsibility equally.`
+            judgment: `FALLBACK_GENERATION: ${f.name} somehow avoided attention and responsibility equally.`
         })),
         songDedications: friends.map(f => ({
             name: f.name,
