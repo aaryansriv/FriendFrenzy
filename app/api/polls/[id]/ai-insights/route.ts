@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { generatePollInsights } from '@/lib/ai-service';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -11,6 +13,12 @@ export async function GET(
         const { id } = await params;
         const supabase = getSupabase();
         const force = request.nextUrl.searchParams.get('force') === 'true';
+
+        console.log(`AI_ROUTE: Fetching insights for poll ${id} (force: ${force})`);
+
+        if (!process.env.OPENROUTER_API_KEY) {
+            console.error("AI_ROUTE: OPENROUTER_API_KEY is missing from environment variables!");
+        }
 
         // 1. Check if insights already exist (unless forced)
         if (!force) {
