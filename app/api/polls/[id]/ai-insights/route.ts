@@ -25,89 +25,69 @@ export async function GET(
             console.error("AI_ROUTE: SUPABASE_SERVICE_ROLE_KEY is missing! Site data queries will fail.");
         }
 
-        // 1. Check if insights already exist (unless forced)
-        if (!force) {
-            const { data: existingInsights } = await supabase
-                .from('poll_ai_insights')
-                .select('insights')
-                .eq('poll_id', id)
-                .maybeSingle();
+        // 1. Check if insights already exist
+        const { data: existingInsights } = await supabase
+            .from('poll_ai_insights')
+            .select('insights')
+            .eq('poll_id', id)
+            .maybeSingle();
 
-            if (existingInsights && existingInsights.insights) {
-                const insights = existingInsights.insights;
-                // Check if the cached results are fallback results
-                const isCachedFallback = (insights as any).friendJudgments?.some((j: any) =>
-                    j.judgment.includes('FALLBACK_GENERATION')
-                );
+        if (existingInsights && existingInsights.insights) {
+            const insights = existingInsights.insights;
+            const isCachedFallback = (insights as any).friendJudgments?.some((j: any) =>
+                j.judgment.includes('FALLBACK_GENERATION')
+            );
 
-                if (!isCachedFallback) {
-                    console.log(`AI_ROUTE: Serving cached insights for ${id}`);
-                    return NextResponse.json(insights);
-                }
+            // If we have real insights, or we have fallback but aren't forcing, return them
+            if (!isCachedFallback || !force) {
+                console.log(`AI_ROUTE: Returning ${isCachedFallback ? 'fallback' : 'real'} insights for ${id}`);
+                return NextResponse.json(insights);
             }
         }
 
-        // 2. check if the poll is closed
+        // 2. If no insights exist AND we aren't forcing, return "processing"
+        // This is the key fix: Polling should NOT trigger a fresh generation
+        if (!force) {
+            console.log(`AI_ROUTE: Insights not ready for ${id}, client should keep polling.`);
+            return NextResponse.json({
+                status: 'processing',
+                message: 'AI is still cooking those roasts...'
+            });
+        }
+
+        // 3. Force Generation Logic (only happens when user clicks button)
+        console.log(`AI_ROUTE: Triggering forced AI generation for ${id}`);
+
         const { data: poll, error: pollError } = await supabase
             .from('polls')
             .select('status, question_set, creators(name)')
             .eq('id', id)
             .single();
 
-        if (pollError || !poll) {
-            return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
-        }
+        if (pollError || !poll) return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
+        if (poll.status !== 'closed') return NextResponse.json({ message: 'Poll active', isClosed: false });
 
-        // AI only runs for closed polls
-        if (poll.status !== 'closed') {
-            return NextResponse.json({
-                message: 'Poll is still active. AI insights are generated once the poll is closed.',
-                isClosed: false
-            });
-        }
+        const [results, friends, confessions] = await Promise.all([
+            supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
+            supabase.from('friends').select('id, name, gender').eq('poll_id', id),
+            supabase.from('confessions').select('confession_text').eq('poll_id', id)
+        ]);
 
-        // 3. Gather data for AI
-        const { data: results, error: resultsError } = await supabase
-            .from('results')
-            .select('question, friend_id, answer_option, friends(name), vote_count')
-            .eq('poll_id', id);
-
-        const { data: friends, error: friendsError } = await supabase
-            .from('friends')
-            .select('id, name, gender')
-            .eq('poll_id', id);
-
-        const { data: confessions, error: confessionsError } = await supabase
-            .from('confessions')
-            .select('confession_text')
-            .eq('poll_id', id);
-
-        if (resultsError || friendsError || confessionsError) throw new Error('Failed to gather poll data');
-
-        // 4. Generate AI Insights
-        console.log(`AI_ROUTE: Generating fresh insights for poll ${id}...`);
         const insights = await generatePollInsights(
             { ...poll, creator_name: (poll as any).creators?.name },
-            results || [],
-            friends || [],
-            confessions?.map((c: { confession_text: string }) => c.confession_text) || []
+            results.data || [],
+            friends.data || [],
+            confessions.data?.map((c: any) => c.confession_text) || []
         );
 
-        // 5. Cache insights in Supabase - ONLY if not a fallback
         const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
         if (!isFallback) {
-            console.log(`AI_ROUTE: Caching fresh insights for ${id}`);
-            const { error: insertError } = await supabase
-                .from('poll_ai_insights')
-                .upsert({
-                    poll_id: id,
-                    insights: insights
-                }, { onConflict: 'poll_id' });
-
-            if (insertError) {
-                console.error('Failed to cache AI insights:', insertError);
-            }
+            console.log(`AI_ROUTE: Success! Saving real insights to Supabase for ${id}`);
+            await supabase.from('poll_ai_insights').upsert({
+                poll_id: id,
+                insights: insights
+            }, { onConflict: 'poll_id' });
         }
 
         return NextResponse.json(insights);
