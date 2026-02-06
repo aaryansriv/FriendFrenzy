@@ -38,7 +38,7 @@ export async function POST(
       .single();
 
     if (pollFetchError || !poll) {
-      return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Frenzy not found' }, { status: 404 });
     }
 
     const now = new Date();

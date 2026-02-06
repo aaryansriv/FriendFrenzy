@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Plus, Copy, Check, Search, X, LayoutDashboard } from 'lucide-react';
 
-import { createPoll } from '@/lib/api';
+import { createFrenzy } from '@/lib/api';
 import { QUESTION_BANK, QuestionCategory, PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
 
 type Friend = {
@@ -91,11 +91,11 @@ const FrenzyInputBox = ({ label, value = '', field, friends, onUpdate }: FrenzyI
   );
 };
 
-interface PollCreationProps {
+interface FrenzyCreationProps {
   onBack: () => void;
 }
 
-export function PollCreation({ onBack }: PollCreationProps) {
+export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
   const [step, setStep] = useState<'setup' | 'share'>('setup');
   const [friends, setFriends] = useState<Friend[]>([
     { name: '', gender: '' },
@@ -108,11 +108,11 @@ export function PollCreation({ onBack }: PollCreationProps) {
   const [customQuestion, setCustomQuestion] = useState('');
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [pollId, setPollId] = useState<string>('');
-  const [pollLink, setPollLink] = useState('');
+  const [frenzyId, setFrenzyId] = useState<string>('');
+  const [frenzyLink, setFrenzyLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [pollName, setPollName] = useState('');
+  const [frenzyName, setFrenzyName] = useState('');
   const [email, setEmail] = useState('');
 
 
@@ -170,9 +170,9 @@ export function PollCreation({ onBack }: PollCreationProps) {
 
   const [adminToken, setAdminToken] = useState('');
 
-  const handleCreatePoll = async () => {
-    if (!pollName.trim()) {
-      alert('Please enter a poll name');
+  const handleCreateFrenzy = async () => {
+    if (!frenzyName.trim()) {
+      alert('Please enter a frenzy name');
       return;
     }
 
@@ -201,19 +201,19 @@ export function PollCreation({ onBack }: PollCreationProps) {
 
     setIsCreating(true);
     try {
-      const result = await createPoll({
-        creatorName: pollName.trim(),
+      const result = await createFrenzy({
+        creatorName: frenzyName.trim(),
         email: email.trim(),
         friends: validFriends.map(f => ({ name: f.name.trim(), gender: f.gender })),
         questions: allQuestions,
       });
 
-      setPollId(result.id);
+      setFrenzyId(result.id);
       setAdminToken(result.adminToken);
-      setPollLink(`${window.location.origin}/poll/${result.id}`);
+      setFrenzyLink(`${window.location.origin}/poll/${result.id}`);
       setStep('share');
     } catch (err: any) {
-      alert(err.message || 'Failed to create poll');
+      alert(err.message || 'Failed to create frenzy');
     } finally {
       setIsCreating(false);
     }
@@ -226,7 +226,7 @@ export function PollCreation({ onBack }: PollCreationProps) {
   });
 
   const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(pollLink);
+    await navigator.clipboard.writeText(frenzyLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -239,17 +239,17 @@ export function PollCreation({ onBack }: PollCreationProps) {
             <div className="w-16 h-16 bg-black rounded-full mx-auto flex items-center justify-center">
               <Check className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-4xl font-bold">Poll Created!</h2>
+            <h2 className="text-4xl font-bold">Frenzy Created!</h2>
             <p className="text-xl text-black/60">
               Share this link with your friends to collect their anonymous votes
             </p>
           </div>
 
           <div className="bg-black/5 border-2 border-black rounded-3xl p-6 space-y-4">
-            <p className="text-sm font-medium text-black/60">Your unique poll link:</p>
+            <p className="text-sm font-medium text-black/60">Your unique frenzy link:</p>
             <div className="flex gap-2">
               <Input
-                value={pollLink}
+                value={frenzyLink}
                 readOnly
                 className="bg-white border-2 border-black rounded-full px-4 text-black font-medium"
               />
@@ -267,7 +267,7 @@ export function PollCreation({ onBack }: PollCreationProps) {
             <div className="flex gap-2">
               <Button
                 onClick={() => {
-                  const text = encodeURIComponent(`Vote on our squad's anonymous poll! ${pollLink}`);
+                  const text = encodeURIComponent(`Vote on our squad's anonymous frenzy! ${frenzyLink}`);
                   window.open(`https://wa.me/?text=${text}`, '_blank');
                 }}
                 className="w-full bg-black text-white hover:bg-black/80 rounded-full font-black h-14 text-lg active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl"
@@ -296,7 +296,7 @@ export function PollCreation({ onBack }: PollCreationProps) {
               <div className="pt-2 flex gap-3">
                 <Button
                   onClick={() => {
-                    window.location.href = `/poll/${pollId}/dashboard?token=${adminToken}`;
+                    window.location.href = `/poll/${frenzyId}/dashboard?token=${adminToken}`;
                   }}
                   className="flex-1 bg-white text-black hover:bg-white/90 rounded-full font-black h-12 text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                 >
@@ -305,7 +305,7 @@ export function PollCreation({ onBack }: PollCreationProps) {
                 </Button>
                 <Button
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/poll/${pollId}/dashboard?token=${adminToken}`);
+                    navigator.clipboard.writeText(`${window.location.origin}/poll/${frenzyId}/dashboard?token=${adminToken}`);
                     alert('Dashboard link copied!');
                   }}
                   variant="outline"
@@ -320,10 +320,10 @@ export function PollCreation({ onBack }: PollCreationProps) {
 
             <div className="pt-4 space-y-3">
               <Button
-                onClick={() => (window.location.href = `/poll/${pollId}`)}
+                onClick={() => (window.location.href = `/poll/${frenzyId}`)}
                 className="w-full bg-black text-white hover:bg-black/80 h-16 rounded-full text-xl font-black transition-all shadow-xl active:scale-95 border-b-4 border-black/20"
               >
-                Go to Poll Page
+                Go to Frenzy Page
               </Button>
 
               <Button
@@ -331,7 +331,7 @@ export function PollCreation({ onBack }: PollCreationProps) {
                 className="w-full border-4 border-black text-black hover:bg-black/5 bg-white h-14 text-lg font-black rounded-full transition-all active:scale-95"
                 variant="outline"
               >
-                Create Another Poll
+                Create Another Frenzy
               </Button>
             </div>
 
@@ -351,19 +351,19 @@ export function PollCreation({ onBack }: PollCreationProps) {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold">Poll Name</h2>
+                <h2 className="text-2xl font-bold">Frenzy Name</h2>
                 <p className="text-black/60">Something catchy for your squad</p>
                 <Input
                   placeholder="e.g. Squad2024"
-                  value={pollName}
-                  onChange={(e) => setPollName(e.target.value)}
+                  value={frenzyName}
+                  onChange={(e) => setFrenzyName(e.target.value)}
                   className="bg-white border-2 border-black/20 rounded-full px-6 h-14 focus:border-black placeholder-black/40 text-black"
                 />
               </div>
 
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold">Your Gmail</h2>
-                <p className="text-black/60">Used to manage all your polls</p>
+                <p className="text-black/60">Used to manage all your frenzies</p>
                 <Input
                   placeholder="name@gmail.com"
                   type="email"
@@ -512,11 +512,11 @@ export function PollCreation({ onBack }: PollCreationProps) {
           {/* Create Button */}
           <div className="pt-8 pb-12">
             <Button
-              onClick={handleCreatePoll}
+              onClick={handleCreateFrenzy}
               disabled={isCreating}
               className="w-full bg-black text-white hover:bg-black/80 py-8 text-2xl font-black rounded-full disabled:opacity-60 shadow-xl transition-all active:scale-[0.98]"
             >
-              {isCreating ? 'Creating Poll...' : 'Create Poll'}
+              {isCreating ? 'Creating Frenzy...' : 'Create Frenzy'}
             </Button>
           </div>
         </div>
@@ -609,7 +609,7 @@ export function PollCreation({ onBack }: PollCreationProps) {
                           onClick={() => addFrenzyQuestion(text)}
                           className="bg-black text-white hover:bg-black/90 rounded-2xl h-14 text-sm font-black uppercase tracking-widest mt-2 active:scale-95 transition-all shadow-xl"
                         >
-                          Add to Poll +
+                          Add to Frenzy +
                         </Button>
                       </div>
                     );

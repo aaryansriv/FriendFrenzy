@@ -10,19 +10,19 @@ interface Friend {
   name: string;
 }
 
-interface Poll {
+interface Frenzy {
   id: string;
   questions: string[];
   friends: Friend[];
 }
 
 interface VotingInterfaceProps {
-  poll: Poll;
+  frenzy: Frenzy;
   onVotesSubmit: (votes: Record<string, string>) => void;
   isSubmitting: boolean;
 }
 
-export function VotingInterface({ poll, onVotesSubmit, isSubmitting }: VotingInterfaceProps) {
+export function VotingInterface({ frenzy, onVotesSubmit, isSubmitting }: VotingInterfaceProps) {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [confession, setConfession] = useState('');
   const [showConfessionScreen, setShowConfessionScreen] = useState(false);
@@ -31,9 +31,9 @@ export function VotingInterface({ poll, onVotesSubmit, isSubmitting }: VotingInt
     setSelections(prev => ({ ...prev, [question]: friendId }));
   };
 
-  const isComplete = poll.questions.every(q => selections[q]);
+  const isComplete = frenzy.questions.every(q => selections[q]);
 
-  if (!poll) return null;
+  if (!frenzy) return null;
 
   if (showConfessionScreen) {
     return (
@@ -96,7 +96,7 @@ export function VotingInterface({ poll, onVotesSubmit, isSubmitting }: VotingInt
 
         {/* 3 x N Grid of Questions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {poll.questions.map((question, qIdx) => (
+          {frenzy.questions.map((question, qIdx) => (
             <div key={qIdx} className="border-4 border-black rounded-3xl p-6 space-y-6 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-4px] transition-all">
               <h3 className="text-xl font-black leading-tight min-h-[3.5rem]">
                 {question}
@@ -128,7 +128,7 @@ export function VotingInterface({ poll, onVotesSubmit, isSubmitting }: VotingInt
                     );
                   }
 
-                  return poll.friends.map(friend => (
+                  return frenzy.friends.map(friend => (
                     <button
                       key={friend.id}
                       onClick={() => handleSelect(question, friend.id)}

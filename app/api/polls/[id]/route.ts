@@ -19,7 +19,7 @@ export async function GET(
 
     if (pollError || !poll) {
       return NextResponse.json(
-        { error: 'Poll not found' },
+        { error: 'Frenzy not found' },
         { status: 404 }
       );
     }

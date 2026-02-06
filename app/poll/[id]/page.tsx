@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Poll, getPoll, submitVote, getResults } from '@/lib/api';
+import { Frenzy, getFrenzy, submitVote, getResults } from '@/lib/api';
 import { VotingInterface } from '@/components/voting-interface';
 import { ResultsDisplay } from '@/components/results-display';
 import { Confetti } from '@/components/confetti';
@@ -12,12 +12,12 @@ import { useRouter } from 'next/navigation';
 
 
 
-export default function PollPage() {
+export default function FrenzyPage() {
   const params = useParams();
   const router = useRouter();
-  const pollId = params.id as string;
+  const frenzyId = params.id as string;
 
-  const [poll, setPoll] = useState<Poll | null>(null);
+  const [frenzy, setFrenzy] = useState<Frenzy | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [votedQuestions, setVotedQuestions] = useState<Set<string>>(new Set());
@@ -30,27 +30,27 @@ export default function PollPage() {
 
 
   useEffect(() => {
-    const loadPoll = async () => {
+    const loadFrenzy = async () => {
       try {
-        const pollData = await getPoll(pollId);
-        setPoll(pollData);
+        const frenzyData = await getFrenzy(frenzyId);
+        setFrenzy(frenzyData);
       } catch (err) {
-        setError('Poll not found or has expired');
+        setError('Frenzy not found or has expired');
       } finally {
         setLoading(false);
       }
     };
 
-    loadPoll();
-  }, [pollId]);
+    loadFrenzy();
+  }, [frenzyId]);
 
   // Real-time polling for results updates
   useEffect(() => {
-    if (votedQuestions.size === 0 || !poll) return;
+    if (votedQuestions.size === 0 || !frenzy) return;
 
     const interval = setInterval(async () => {
       try {
-        const resultsData = await getResults(pollId);
+        const resultsData = await getResults(frenzyId);
         setAllResults(resultsData.results);
         setTotalVoters(resultsData.totalVoters);
       } catch (err) {
@@ -59,22 +59,22 @@ export default function PollPage() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [votedQuestions, poll, pollId]);
+  }, [votedQuestions, frenzy, frenzyId]);
 
 
   const handleVote = async (friendId: string) => {
-    if (!poll || !voterId) return;
+    if (!frenzy || !voterId) return;
 
-    const currentQuestion = poll.questions[currentQuestionIndex];
+    const currentQuestion = frenzy.questions[currentQuestionIndex];
 
     try {
       setVoteError(null);
-      await submitVote(pollId, friendId, currentQuestion, voterId);
+      await submitVote(frenzyId, friendId, currentQuestion, voterId);
       setShowConfetti(true);
       setVotedQuestions((prev) => new Set([...prev, currentQuestion]));
 
       // Load all results
-      const resultsData = await getResults(pollId);
+      const resultsData = await getResults(frenzyId);
       setAllResults(resultsData.results);
       setTotalVoters(resultsData.totalVoters);
 
@@ -94,18 +94,18 @@ export default function PollPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBulkSubmit = async (votes: Record<string, string>, confession?: string) => {
-    if (!poll || !voterId) return;
+    if (!frenzy || !voterId) return;
     setIsSubmitting(true);
     try {
       setVoteError(null);
       // Submit each vote
       for (const [question, friendId] of Object.entries(votes)) {
-        await submitVote(pollId, friendId, question, voterId);
+        await submitVote(frenzyId, friendId, question, voterId);
       }
 
       // Submit confession if exists
       if (confession && confession.trim()) {
-        await fetch(`/api/polls/${pollId}/confessions`, {
+        await fetch(`/api/polls/${frenzyId}/confessions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ confession }),
@@ -113,14 +113,14 @@ export default function PollPage() {
       }
 
       setShowConfetti(true);
-      setVotedQuestions(new Set(poll.questions));
+      setVotedQuestions(new Set(frenzy.questions));
 
-      const resultsData = await getResults(pollId);
+      const resultsData = await getResults(frenzyId);
       setAllResults(resultsData.results);
       setTotalVoters(resultsData.totalVoters);
 
       setTimeout(() => {
-        setCurrentQuestionIndex(poll.questions.length); // Trigger results view
+        setCurrentQuestionIndex(frenzy.questions.length); // Trigger results view
         setShowConfetti(false);
       }, 2000);
     } catch (err: any) {
@@ -135,20 +135,20 @@ export default function PollPage() {
       <main className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 text-black animate-spin mx-auto" />
-          <p className="text-black/60 font-medium">Loading poll...</p>
+          <p className="text-black/60 font-medium">Loading frenzy...</p>
         </div>
       </main>
     );
   }
 
-  if (error || !poll) {
+  if (error || !frenzy) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center px-4">
         <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold">Poll Not Found</h1>
-          <p className="text-black/60">The poll you're looking for doesn't exist or has expired.</p>
+          <h1 className="text-3xl font-bold">Frenzy Not Found</h1>
+          <p className="text-black/60">The frenzy you're looking for doesn't exist or has expired.</p>
           <a href="/" className="inline-block mt-4 px-8 py-3 bg-black text-white rounded-full hover:bg-black/80 font-bold">
-            Create a New Poll
+            Create a New Frenzy
           </a>
         </div>
       </main>
@@ -156,12 +156,12 @@ export default function PollPage() {
   }
 
   // If closed, show results immediately
-  if (poll.status === 'closed') {
+  if (frenzy.status === 'closed') {
     return (
       <main className="min-h-screen bg-white relative">
         <ResultsDisplay
-          pollId={pollId}
-          questions={poll.questions}
+          frenzyId={frenzyId}
+          questions={frenzy.questions}
           allResults={allResults}
           isClosed={true}
         />
@@ -175,9 +175,9 @@ export default function PollPage() {
       <main className="min-h-screen bg-white flex items-center justify-center p-8">
         <div className="max-w-md w-full space-y-8 text-center">
           <h1 className="text-4xl font-black">WHO ARE YOU?</h1>
-          <p className="text-black/60 font-bold">Only people in the friends list can vote.</p>
+          <p className="text-black/60 font-bold">Only people in the friends list can join the frenzy.</p>
           <div className="grid gap-3">
-            {poll.friends.map(friend => (
+            {frenzy.friends.map((friend: any) => (
               <button
                 key={friend.id}
                 onClick={() => setVoterId(friend.id)}
@@ -192,7 +192,7 @@ export default function PollPage() {
     );
   }
 
-  const allQuestionsAnswered = poll && currentQuestionIndex >= poll.questions.length;
+  const allQuestionsAnswered = frenzy && currentQuestionIndex >= frenzy.questions.length;
 
   return (
     <main className="min-h-screen bg-white relative">
@@ -208,14 +208,14 @@ export default function PollPage() {
 
       {allQuestionsAnswered ? (
         <ResultsDisplay
-          pollId={pollId}
-          questions={poll.questions}
+          frenzyId={frenzyId}
+          questions={frenzy.questions}
           allResults={allResults}
-          isClosed={poll.status === 'closed'}
+          isClosed={frenzy.status === 'closed'}
         />
       ) : (
         <VotingInterface
-          poll={poll}
+          frenzy={frenzy}
           onVotesSubmit={handleBulkSubmit}
           isSubmitting={isSubmitting}
         />

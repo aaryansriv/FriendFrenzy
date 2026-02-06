@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PollCreation } from '@/components/poll-creation';
+import { FrenzyCreation } from '@/components/poll-creation';
 import { Landing } from '@/components/landing';
 import { Suspense } from 'react';
 
@@ -12,13 +12,13 @@ function HomeContent() {
   const manageMode = searchParams.get('manage') === 'true';
 
   if (showCreation) {
-    return <PollCreation onBack={() => router.push('/')} />;
+    return <FrenzyCreation onBack={() => router.push('/')} />;
   }
 
   return (
     <Landing
       initialManageMode={manageMode}
-      onStartPoll={() => router.push('/?create=true')}
+      onStartFrenzy={() => router.push('/?create=true')}
     />
   );
 }

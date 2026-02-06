@@ -8,14 +8,14 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 
 interface LandingProps {
-  onStartPoll: () => void;
+  onStartFrenzy: () => void;
   initialManageMode?: boolean;
 }
 
-export function Landing({ onStartPoll, initialManageMode = false }: LandingProps) {
+export function Landing({ onStartFrenzy, initialManageMode = false }: LandingProps) {
   const [manageMode, setManageMode] = useState(initialManageMode);
   const [searchEmail, setSearchEmail] = useState('');
-  const [polls, setPolls] = useState<any[]>([]);
+  const [frenzies, setFrenzies] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'closed'>('all');
   const [isSearching, setIsSearching] = useState(false);
 
@@ -31,8 +31,8 @@ export function Landing({ onStartPoll, initialManageMode = false }: LandingProps
       const res = await fetch(`/api/creators/polls?email=${encodeURIComponent(searchEmail.trim())}`);
 
       const data = await res.json();
-      setPolls(data.polls || []);
-      if (data.polls?.length === 0) alert('No polls found for this name.');
+      setFrenzies(data.polls || []);
+      if (data.polls?.length === 0) alert('No frenzies found for this name.');
     } catch (err) {
       alert('Search failed');
     } finally {
@@ -58,22 +58,22 @@ export function Landing({ onStartPoll, initialManageMode = false }: LandingProps
                 The AI That Spills the Tea.
               </h1>
               <p className="text-xl text-black/60 leading-relaxed max-w-sm">
-                Host anonymous polls, get honest results, and let <strong className="text-indigo-600">Frenzy AI</strong> roast your friend group based on the data.
+                Host anonymous frenzies, get honest results, and let <strong className="text-indigo-600">Frenzy AI</strong> roast your friend group based on the data.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button
-                  onClick={onStartPoll}
+                  onClick={onStartFrenzy}
                   className="bg-indigo-600 text-white hover:bg-indigo-700 rounded-full px-8 py-3 font-semibold flex items-center gap-2 h-14 shadow-lg shadow-indigo-200"
                 >
-                  Start a Poll <ArrowRight className="w-4 h-4" />
+                  Start a Frenzy <ArrowRight className="w-4 h-4" />
                 </Button>
                 <Button
                   onClick={() => setManageMode(true)}
                   variant="outline"
                   className="border-2 border-black text-black hover:bg-black/5 rounded-full px-8 py-3 font-semibold bg-transparent h-14"
                 >
-                  Manage My Polls
+                  Manage My Frenzies
                 </Button>
               </div>
             </div>
@@ -90,8 +90,8 @@ export function Landing({ onStartPoll, initialManageMode = false }: LandingProps
         ) : (
           <div className="max-w-2xl w-full space-y-12 relative">
             <div className="text-center space-y-4">
-              <h1 className="text-5xl font-black">Manage Your Polls</h1>
-              <p className="text-xl text-black/60">Enter your Gmail to see all your active and past polls.</p>
+              <h1 className="text-5xl font-black">Manage Your Frenzies</h1>
+              <p className="text-xl text-black/60">Enter your Gmail to see all your active and past frenzies.</p>
             </div>
 
             <div className="space-y-6">
@@ -114,10 +114,10 @@ export function Landing({ onStartPoll, initialManageMode = false }: LandingProps
                 </Button>
               </div>
 
-              {polls.length > 0 && (
+              {frenzies.length > 0 && (
                 <div className="space-y-4 pt-8">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-2xl font-black">Your Polls</h3>
+                    <h3 className="text-2xl font-black">Your Frenzies</h3>
                     <div className="flex gap-2">
                       {['all', 'active', 'closed'].map((status) => (
                         <button
@@ -134,18 +134,18 @@ export function Landing({ onStartPoll, initialManageMode = false }: LandingProps
                     </div>
                   </div>
                   <div className="grid gap-4">
-                    {polls
+                    {frenzies
                       .filter(p => filterStatus === 'all' || p.status === filterStatus)
-                      .map((poll) => (
-                        <div key={poll.id} className="border-2 border-black p-6 rounded-3xl flex justify-between items-center bg-black/5 hover:bg-black/10 transition-colors">
+                      .map((frenzy) => (
+                        <div key={frenzy.id} className="border-2 border-black p-6 rounded-3xl flex justify-between items-center bg-black/5 hover:bg-black/10 transition-colors">
                           <div className="space-y-1">
-                            <p className="font-black text-lg">Created {new Date(poll.created_at).toLocaleDateString()}</p>
-                            <p className={`text-sm font-bold uppercase ${poll.status === 'active' ? 'text-green-600' : 'text-red-500'}`}>
-                              {poll.status} • {poll.question_set.length} Questions
+                            <p className="font-black text-lg">Created {new Date(frenzy.created_at).toLocaleDateString()}</p>
+                            <p className={`text-sm font-bold uppercase ${frenzy.status === 'active' ? 'text-green-600' : 'text-red-500'}`}>
+                              {frenzy.status} • {frenzy.question_set.length} Questions
                             </p>
                           </div>
                           <Button
-                            onClick={() => window.location.href = `/poll/${poll.id}/dashboard?token=${poll.admin_token}`}
+                            onClick={() => window.location.href = `/poll/${frenzy.id}/dashboard?token=${frenzy.admin_token}`}
                             className="bg-black text-white rounded-full font-bold px-6"
                           >
                             Dashboard <LayoutDashboard className="w-4 h-4 ml-2" />

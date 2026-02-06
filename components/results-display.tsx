@@ -6,7 +6,7 @@ import { Crown, Sparkles, Music, Quote, Users, Play, ExternalLink, RefreshCw, Sh
 import { getAIInsights, AIInsights } from '@/lib/api';
 
 interface ResultsDisplayProps {
-  pollId: string;
+  frenzyId: string;
   questions: string[];
   allResults: Record<string, Record<string, number>>;
   isClosed: boolean;
@@ -31,7 +31,7 @@ const STALL_MESSAGES = [
   "Brewing the perfect blend of sarcasm...",
 ];
 
-export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmin }: ResultsDisplayProps) {
+export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAdmin }: ResultsDisplayProps) {
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -55,17 +55,17 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
   }, [loadingAI]);
 
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout;
-    let pollCount = 0;
-    const MAX_POLLS = 30; // Increased to 90 seconds to be safe
+    let frenzyInterval: NodeJS.Timeout;
+    let frenzyCount = 0;
+    const MAX_FRENZIES = 30; // Increased to 90 seconds to be safe
 
     const fetchInsights = async (isForced = false) => {
       if (!isClosed) return;
       setLoadingAI(true);
 
       try {
-        console.log(`AI_UI: Requesting ${isForced ? 'forced ' : ''}insights for ${pollId}`);
-        const data = await getAIInsights(pollId, isForced);
+        console.log(`AI_UI: Requesting ${isForced ? 'forced ' : ''}insights for ${frenzyId}`);
+        const data = await getAIInsights(frenzyId, isForced);
 
         const status = (data as any).status;
         const isFallback = data.friendJudgments?.some((j: any) => j.judgment.includes('FALLBACK_GENERATION'));
@@ -76,37 +76,37 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
           console.log("AI_UI: Insights successfully loaded!");
           setAiInsights(data);
           setLoadingAI(false);
-          if (pollInterval) clearInterval(pollInterval);
+          if (frenzyInterval) clearInterval(frenzyInterval);
         } else if (status === 'processing' || isForced || isFallback) {
           // If the server is still processing, or we got a fallback, we must keep polling
-          if (!pollInterval) {
-            console.log("AI_UI: Starting poll loop...");
-            pollInterval = setInterval(async () => {
-              pollCount++;
-              console.log(`AI_UI: Polling attempt ${pollCount}/${MAX_POLLS}`);
+          if (!frenzyInterval) {
+            console.log("AI_UI: Starting frenzy loop...");
+            frenzyInterval = setInterval(async () => {
+              frenzyCount++;
+              console.log(`AI_UI: Polling attempt ${frenzyCount}/${MAX_FRENZIES}`);
 
-              if (pollCount >= MAX_POLLS) {
+              if (frenzyCount >= MAX_FRENZIES) {
                 console.log("AI_UI: Max polls reached. Stopping loader.");
-                clearInterval(pollInterval);
+                clearInterval(frenzyInterval);
                 setLoadingAI(false);
                 return;
               }
 
               try {
                 // Poll WITHOUT forcing, so it just reads from Supabase
-                const pollData = await getAIInsights(pollId, false);
-                const pollStatus = (pollData as any).status;
+                const frenzyData = await getAIInsights(frenzyId, false);
+                const frenzyStatus = (frenzyData as any).status;
 
-                if (pollStatus === 'completed') {
+                if (frenzyStatus === 'completed') {
                   console.log("AI_UI: Real insights found leading to UI update!");
-                  setAiInsights(pollData);
+                  setAiInsights(frenzyData);
                   setLoadingAI(false);
-                  clearInterval(pollInterval);
-                } else if (pollStatus === 'failed') {
+                  clearInterval(frenzyInterval);
+                } else if (frenzyStatus === 'failed') {
                   console.log("AI_UI: AI specifically marked as failed in DB.");
-                  setAiInsights(pollData);
+                  setAiInsights(frenzyData);
                   setLoadingAI(false);
-                  clearInterval(pollInterval);
+                  clearInterval(frenzyInterval);
                 }
               } catch (err) {
                 console.error("AI_UI: Poller error:", err);
@@ -128,14 +128,14 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
     fetchInsights(refreshKey > 0);
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval);
+      if (frenzyInterval) clearInterval(frenzyInterval);
     };
-  }, [pollId, isClosed, refreshKey]);
+  }, [frenzyId, isClosed, refreshKey]);
 
   if (!questions) return null;
 
   const handleShareRoast = (name: string, judgment: string) => {
-    const text = encodeURIComponent(`💀 FRENZY AI JUST ROASTED ${name.toUpperCase()}!\n\n"${judgment}"\n\nSee all roasts here: ${window.location.origin}/poll/${pollId}`);
+    const text = encodeURIComponent(`💀 FRENZY AI JUST ROASTED ${name.toUpperCase()}!\n\n"${judgment}"\n\nSee all roasts here: ${window.location.origin}/poll/${frenzyId}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
@@ -145,7 +145,7 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
         {/* Header */}
         <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-6 py-2 bg-black text-white rounded-full text-xs font-black tracking-[0.2em] uppercase shadow-xl animate-bounce">
-            {isClosed ? 'The Poll is Closed 🏁' : 'Live Results ⚡️'}
+            {isClosed ? 'The Frenzy is Closed 🏁' : 'Live Results ⚡️'}
           </div>
           <h1 className="text-6xl md:text-8xl font-black text-black tracking-tighter leading-none">
             {isClosed ? 'THE VERDICT.' : 'WHO IS WHO?'}
@@ -344,7 +344,7 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-40 animate-in slide-in-from-bottom-10 duration-1000 delay-500">
             <Button
               onClick={() => {
-                const text = encodeURIComponent(`🚨 THE VERDICT IS IN! Frenzy AI just COOKED our squad. See the results and the playlist here: ${window.location.origin}/poll/${pollId}`);
+                const text = encodeURIComponent(`🚨 THE VERDICT IS IN! Frenzy AI just COOKED our squad. See the results and the playlist here: ${window.location.origin}/poll/${frenzyId}`);
                 window.open(`https://wa.me/?text=${text}`, '_blank');
               }}
               className="w-full bg-[#25D366] text-white hover:bg-emerald-600 rounded-[2rem] font-black h-20 text-xl active:scale-95 transition-all flex items-center justify-center gap-4 shadow-[0_20px_50px_rgba(37,211,102,0.4)] border-b-8 border-emerald-700"
@@ -362,7 +362,7 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
               onClick={() => window.location.href = '/'}
               className="w-full bg-black text-white hover:bg-black/80 h-16 rounded-[2rem] text-xl font-black transition-all active:scale-95 shadow-xl"
             >
-              Create Your Own Poll →
+              Create Your Own Frenzy →
             </Button>
           </div>
         )}

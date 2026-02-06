@@ -1,14 +1,11 @@
-export interface CreatePollRequest {
+export interface CreateFrenzyRequest {
   creatorName: string;
   email: string;
   friends: { name: string; gender: string }[];
   questions: string[];
 }
 
-
-
-
-export interface Poll {
+export interface Frenzy {
   id: string;
   questions: string[];
   friends: { id: string; name: string }[];
@@ -19,8 +16,8 @@ export interface Poll {
 
 
 
-export async function createPoll(
-  request: CreatePollRequest
+export async function createFrenzy(
+  request: CreateFrenzyRequest
 ): Promise<{ id: string; adminToken: string }> {
 
   const response = await fetch('/api/polls', {
@@ -31,30 +28,30 @@ export async function createPoll(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.details || errorData.error || 'Failed to create poll');
+    throw new Error(errorData.details || errorData.error || 'Failed to create frenzy');
   }
 
 
   return response.json();
 }
 
-export async function getPoll(pollId: string): Promise<Poll> {
-  const response = await fetch(`/api/polls/${pollId}`);
+export async function getFrenzy(frenzyId: string): Promise<Frenzy> {
+  const response = await fetch(`/api/polls/${frenzyId}`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch poll');
+    throw new Error('Failed to fetch frenzy');
   }
 
   return response.json();
 }
 
 export async function submitVote(
-  pollId: string,
+  frenzyId: string,
   friendId: string,
   question: string,
   voterId: string
 ): Promise<void> {
-  const response = await fetch(`/api/polls/${pollId}/votes`, {
+  const response = await fetch(`/api/polls/${frenzyId}/votes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ friendId, question, voterId }),
@@ -67,10 +64,10 @@ export async function submitVote(
 }
 
 export async function getResults(
-  pollId: string
+  frenzyId: string
 ): Promise<{ results: Record<string, Record<string, number>>; totalVoters: number }> {
 
-  const response = await fetch(`/api/polls/${pollId}/results`);
+  const response = await fetch(`/api/polls/${frenzyId}/results`);
 
   if (!response.ok) {
     throw new Error('Failed to fetch results');
@@ -96,8 +93,8 @@ export interface AIInsights {
   isClosed?: boolean;
 }
 
-export async function getAIInsights(pollId: string, force?: boolean): Promise<AIInsights> {
-  const url = `/api/polls/${pollId}/ai-insights${force ? '?force=true' : ''}`;
+export async function getAIInsights(frenzyId: string, force?: boolean): Promise<AIInsights> {
+  const url = `/api/polls/${frenzyId}/ai-insights${force ? '?force=true' : ''}`;
   const response = await fetch(url);
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

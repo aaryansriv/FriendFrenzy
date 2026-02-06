@@ -15,7 +15,7 @@ export function Header() {
                     Home
                 </Link>
                 <Link href="/?manage=true" className="text-sm font-bold hover:text-black/60 transition">
-                    Manage Polls
+                    Manage Frenzies
                 </Link>
             </div>
 
@@ -23,7 +23,7 @@ export function Header() {
                 <Button
                     className="bg-transparent border-2 border-black text-black hover:bg-black hover:text-white rounded-full px-6 py-2 font-bold transition h-12"
                 >
-                    Create Poll
+                    Create Frenzy
                 </Button>
             </Link>
         </nav>
