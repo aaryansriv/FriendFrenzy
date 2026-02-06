@@ -80,7 +80,11 @@ export function Landing({ onStartPoll, initialManageMode = false }: LandingProps
 
             {/* Right Illustration */}
             <div className="relative h-[400px] lg:h-[600px] w-full flex items-center justify-center p-8 lg:p-0 mt-8 lg:mt-0">
-              <HeroCharacters />
+              <img
+                src="/hero_friends.png"
+                alt="Friends having fun"
+                className="w-full h-full object-contain max-h-[500px]"
+              />
             </div>
           </div>
         ) : (
