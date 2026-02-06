@@ -12,7 +12,7 @@ export async function GET(
     // 1. Get all results for this poll
     const { data: results, error: resultsError } = await supabase
       .from('results')
-      .select('question, friend_id, answer_option, friends(name), vote_count')
+      .select('question, friend_id, answer_option, friends(*), vote_count')
       .eq('poll_id', id);
 
     if (resultsError) throw resultsError;

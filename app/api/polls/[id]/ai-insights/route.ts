@@ -50,24 +50,27 @@ export async function GET(
         if (force || !report) {
             console.log(`AI_ROUTE: Starting FRESH generation for poll ${id}`);
 
-            // Immediately mark as processing in DB so other polls don't trigger it
+            // Immediately mark as processing in DB
             await supabase.from('poll_ai_insights').upsert({
                 poll_id: id,
                 insights: { status: 'processing', message: 'The AI is cooking...' },
                 updated_at: new Date().toISOString()
             }, { onConflict: 'poll_id' });
 
-            // GATHER DATA (Optimized)
-            const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
-                supabase.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
-                supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
-                supabase.from('friends').select('id, name, gender').eq('poll_id', id),
-                supabase.from('confessions').select('confession_text').eq('poll_id', id)
-            ]);
-
-            if (pollRes.error || !pollRes.data) return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
-
             try {
+                // GATHER DATA
+                console.log(`AI_ROUTE: Gathering poll data for ${id}...`);
+                const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
+                    supabase.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
+                    supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
+                    supabase.from('friends').select('id, name, gender').eq('poll_id', id),
+                    supabase.from('confessions').select('confession_text').eq('poll_id', id)
+                ]);
+
+                if (pollRes.error || !pollRes.data) throw new Error(pollRes.error?.message || 'Poll data missing');
+                if (resultsRes.error) throw new Error(`Results query failed: ${resultsRes.error.message}`);
+
+                console.log(`AI_ROUTE: Data gathered. Calling AI Service...`);
                 const insights = await generatePollInsights(
                     { ...pollRes.data, creator_name: (pollRes.data as any).creators?.name },
                     resultsRes.data || [],
@@ -78,18 +81,16 @@ export async function GET(
                 const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
                 if (!isFallback) {
-                    console.log(`AI_ROUTE: Successfully generated insights for ${id}. Saving to DB...`);
+                    console.log(`AI_ROUTE: Success for ${id}. Saving 'completed' to DB.`);
                     const finalInsights = { ...insights, status: 'completed' };
-                    const { error: saveError } = await supabase.from('poll_ai_insights').upsert({
+                    await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
                         insights: finalInsights,
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
-
-                    if (saveError) console.error("AI_ROUTE: DB Save Error:", saveError);
                     return NextResponse.json(finalInsights);
                 } else {
-                    console.warn(`AI_ROUTE: AI returned fallback for ${id}. Saving fallback to stop poller.`);
+                    console.warn(`AI_ROUTE: AI Fallback for ${id}. Saving 'failed' to DB.`);
                     const fallbackData = { ...insights, status: 'failed' };
                     await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
@@ -99,13 +100,14 @@ export async function GET(
                     return NextResponse.json(fallbackData);
                 }
             } catch (err: any) {
-                console.error(`AI_ROUTE: Critical failure for ${id}:`, err);
+                console.error(`AI_ROUTE: Generation error for ${id}:`, err);
+                const errorData = { status: 'failed', error: err.message };
                 await supabase.from('poll_ai_insights').upsert({
                     poll_id: id,
-                    insights: { status: 'failed', error: err.message },
+                    insights: errorData,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'poll_id' });
-                throw err;
+                return NextResponse.json(errorData, { status: 500 });
             }
         }
 

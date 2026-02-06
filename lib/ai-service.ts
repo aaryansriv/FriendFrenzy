@@ -1,6 +1,8 @@
 // lib/ai-service.ts
 
 export interface AIServiceResponse {
+    status?: string;
+    message?: string;
     friendJudgments: { name: string; judgment: string }[];
     songDedications: {
         name: string;
@@ -14,11 +16,12 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemma-3-4b-it:free",
-    "tngtech/deepseek-r1t2-chimera:free"
+    "google/gemma-3n-e4b-it:free",
+    // "google/gemini-2.0-flash-lite-preview-02-05:free",
+    // "meta-llama/llama-3.1-8b-instruct:free",
+    // "meta-llama/llama-3.2-3b-instruct:free",
+    // "google/gemma-3-4b-it:free",
+    // "tngtech/deepseek-r1t2-chimera:free"
 ];
 
 export async function generatePollInsights(
@@ -221,7 +224,8 @@ ${JSON.stringify(pollSummary, null, 2)}
     // Try models in sequence until one works
     for (const model of MODELS_TO_TRY) {
         try {
-            console.log(`AI_SERVICE: Attempting generation with model: ${model}`);
+            console.log(`AI_SERVICE: Sending Payload to ${model}:`, JSON.stringify(pollSummary).substring(0, 200) + "...");
+
             const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
                 headers: {
@@ -233,8 +237,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                 body: JSON.stringify({
                     model: model,
                     messages: [
-                        { role: "system", content: systemPrompt },
-                        { role: "user", content: userPrompt }
+                        { role: "user", content: `${systemPrompt}\n\nTask:\n${userPrompt}` }
                     ],
                     temperature: 0.8,
                     max_tokens: 1000
@@ -242,7 +245,7 @@ ${JSON.stringify(pollSummary, null, 2)}
             });
 
             if (response.status === 429) {
-                console.warn(`AI_SERVICE: Model ${model} is rate limited (429). Trying next...`);
+                console.warn(`AI_SERVICE: Model ${model} is rate limited (429).`);
                 continue;
             }
 
@@ -261,7 +264,7 @@ ${JSON.stringify(pollSummary, null, 2)}
                 continue;
             }
 
-            console.log(`AI_SERVICE: Model ${model} SUCCESS. Length: ${content.length}`);
+            console.log(`AI_SERVICE: Model ${model} SUCCESS. Content length: ${content.length}`);
 
             // Cleanup JSON string
             content = content.trim();
