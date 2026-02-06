@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { generatePollInsights } from '@/lib/ai-service';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -17,7 +17,7 @@ export async function GET(
 
         console.log(`AI_ROUTE: Fetching insights for poll ${id} (force: ${force})`);
 
-        // Check for required environment variables early
+        // Check for required environment variables
         if (!process.env.OPENROUTER_API_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
             console.error("AI_ROUTE: Missing API keys in environment!");
             return NextResponse.json(
@@ -48,7 +48,7 @@ export async function GET(
         }
 
         // 4. Start New Generation (or Force)
-        console.log(`AI_ROUTE: Starting EDGE BACKGROUND generation for poll ${id}`);
+        console.log(`AI_ROUTE: Starting NODE BACKGROUND generation for poll ${id}`);
 
         // Immediately mark as processing in DB
         const processingData = { status: 'processing', message: 'The AI is cooking...' };
@@ -58,10 +58,10 @@ export async function GET(
             updated_at: new Date().toISOString()
         }, { onConflict: 'poll_id' });
 
-        // Use request.waitUntil which is standard for Edge Runtime
-        request.waitUntil((async () => {
+        // Use 'after' for background processing
+        after(async () => {
             try {
-                console.log(`AI_BG_EDGE: Gathering poll data for ${id}...`);
+                console.log(`AI_BG_NODE: Gathering poll data for ${id}...`);
                 const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
                     supabase.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
                     supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
@@ -71,7 +71,7 @@ export async function GET(
 
                 if (pollRes.error || !pollRes.data) throw new Error(pollRes.error?.message || 'Poll data missing');
 
-                console.log(`AI_BG_EDGE: Calling AI Service...`);
+                console.log(`AI_BG_NODE: Calling AI Service...`);
                 const aiInsights = await generatePollInsights(
                     { ...pollRes.data, creator_name: (pollRes.data as any).creators?.name },
                     resultsRes.data || [],
@@ -82,14 +82,14 @@ export async function GET(
                 const isFallback = aiInsights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
                 if (!isFallback) {
-                    console.log(`AI_BG_EDGE: Success for ${id}. Saving 'completed' to DB.`);
+                    console.log(`AI_BG_NODE: Success for ${id}. Saving 'completed' to DB.`);
                     await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
                         insights: { ...aiInsights, status: 'completed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
                 } else {
-                    console.warn(`AI_BG_EDGE: AI Fallback for ${id}. Saving 'failed' to DB.`);
+                    console.warn(`AI_BG_NODE: AI Fallback for ${id}. Saving 'failed' to DB.`);
                     await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
                         insights: { ...aiInsights, status: 'failed' },
@@ -97,14 +97,14 @@ export async function GET(
                     }, { onConflict: 'poll_id' });
                 }
             } catch (err: any) {
-                console.error(`AI_BG_EDGE: Generation error for ${id}:`, err);
+                console.error(`AI_BG_NODE: Generation error for ${id}:`, err);
                 await supabase.from('poll_ai_insights').upsert({
                     poll_id: id,
                     insights: { status: 'failed', error: err.message },
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'poll_id' });
             }
-        })());
+        });
 
         return NextResponse.json(processingData);
 
