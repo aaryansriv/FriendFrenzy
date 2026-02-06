@@ -1,5 +1,4 @@
-// app/api/polls/[id]/ai-insights/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { generatePollInsights } from '@/lib/ai-service';
 
@@ -17,15 +16,7 @@ export async function GET(
 
         console.log(`AI_ROUTE: Fetching insights for poll ${id} (force: ${force})`);
 
-        if (!process.env.OPENROUTER_API_KEY) {
-            console.error("AI_ROUTE: OPENROUTER_API_KEY is missing from environment variables!");
-        }
-
-        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-            console.error("AI_ROUTE: SUPABASE_SERVICE_ROLE_KEY is missing! Site data queries will fail.");
-        }
-
-        // 1. Check current status in our new tracking table
+        // 1. Check current status in our tracking table
         const { data: report } = await supabase
             .from('poll_ai_insights')
             .select('*')
@@ -43,23 +34,24 @@ export async function GET(
         // 3. If it's processing and we aren't forcing, tell the client to keep polling
         if (insights?.status === 'processing' && !force) {
             console.log(`AI_ROUTE: Report for ${id} is still processing...`);
-            return NextResponse.json(insights);
+            return NextResponse.json({ status: 'processing', message: 'The AI is cooking...' });
         }
 
-        // 4. Force Generation or Start New Generation
-        if (force || !report) {
-            console.log(`AI_ROUTE: Starting FRESH generation for poll ${id}`);
+        // 4. Start New Generation (or Force)
+        console.log(`AI_ROUTE: Starting BACKGROUND generation for poll ${id}`);
 
-            // Immediately mark as processing in DB
-            await supabase.from('poll_ai_insights').upsert({
-                poll_id: id,
-                insights: { status: 'processing', message: 'The AI is cooking...' },
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'poll_id' });
+        // Immediately mark as processing in DB
+        const processingData = { status: 'processing', message: 'The AI is cooking...' };
+        await supabase.from('poll_ai_insights').upsert({
+            poll_id: id,
+            insights: processingData,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'poll_id' });
 
+        // Heavy lifting in the background
+        after(async () => {
             try {
-                // GATHER DATA
-                console.log(`AI_ROUTE: Gathering poll data for ${id}...`);
+                console.log(`AI_BG: Gathering poll data for ${id}...`);
                 const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
                     supabase.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
                     supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
@@ -68,50 +60,43 @@ export async function GET(
                 ]);
 
                 if (pollRes.error || !pollRes.data) throw new Error(pollRes.error?.message || 'Poll data missing');
-                if (resultsRes.error) throw new Error(`Results query failed: ${resultsRes.error.message}`);
 
-                console.log(`AI_ROUTE: Data gathered. Calling AI Service...`);
-                const insights = await generatePollInsights(
+                console.log(`AI_BG: Calling AI Service...`);
+                const aiInsights = await generatePollInsights(
                     { ...pollRes.data, creator_name: (pollRes.data as any).creators?.name },
                     resultsRes.data || [],
                     friendsRes.data || [],
                     confessionsRes.data?.map((c: any) => c.confession_text) || []
                 );
 
-                const isFallback = insights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
+                const isFallback = aiInsights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
                 if (!isFallback) {
-                    console.log(`AI_ROUTE: Success for ${id}. Saving 'completed' to DB.`);
-                    const finalInsights = { ...insights, status: 'completed' };
+                    console.log(`AI_BG: Success for ${id}. Saving 'completed' to DB.`);
                     await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
-                        insights: finalInsights,
+                        insights: { ...aiInsights, status: 'completed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
-                    return NextResponse.json(finalInsights);
                 } else {
-                    console.warn(`AI_ROUTE: AI Fallback for ${id}. Saving 'failed' to DB.`);
-                    const fallbackData = { ...insights, status: 'failed' };
+                    console.warn(`AI_BG: AI Fallback for ${id}. Saving 'failed' to DB.`);
                     await supabase.from('poll_ai_insights').upsert({
                         poll_id: id,
-                        insights: fallbackData,
+                        insights: { ...aiInsights, status: 'failed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
-                    return NextResponse.json(fallbackData);
                 }
             } catch (err: any) {
-                console.error(`AI_ROUTE: Generation error for ${id}:`, err);
-                const errorData = { status: 'failed', error: err.message };
+                console.error(`AI_BG: Generation error for ${id}:`, err);
                 await supabase.from('poll_ai_insights').upsert({
                     poll_id: id,
-                    insights: errorData,
+                    insights: { status: 'failed', error: err.message },
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'poll_id' });
-                return NextResponse.json(errorData, { status: 500 });
             }
-        }
+        });
 
-        return NextResponse.json({ status: 'processing' });
+        return NextResponse.json(processingData);
 
     } catch (error: any) {
         console.error('AI Insights Route Error:', error);

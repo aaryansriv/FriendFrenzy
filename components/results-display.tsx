@@ -13,15 +13,46 @@ interface ResultsDisplayProps {
   isAdmin?: boolean;
 }
 
+const STALL_MESSAGES = [
+  "Scraping the group chat for drama...",
+  "Analyzing your questionable life choices...",
+  "Consulting the chaos gods...",
+  "Roast in progress. Prepare for emotional damage...",
+  "Checking which friend is most likely to block you...",
+  "Spilling the tea. It's hot.",
+  "Calculating the exact level of NPC energy...",
+  "Gathering the evidence. You're cooked.",
+  "Reading your anonymous confessions... yikes.",
+  "Assigning main character energy. Or lack thereof.",
+  "Finalizing the sonic vibes...",
+  "Wait, people actually voted for this?",
+  "The AI is laughing. That's usually a bad sign.",
+  "Is that a red flag or a whole parade?",
+  "Brewing the perfect blend of sarcasm...",
+];
+
 export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmin }: ResultsDisplayProps) {
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [stallMessage, setStallMessage] = useState(STALL_MESSAGES[0]);
+
+  // Stall message rotation
+  useEffect(() => {
+    if (!loadingAI) return;
+    const interval = setInterval(() => {
+      setStallMessage(prev => {
+        const currentIndex = STALL_MESSAGES.indexOf(prev);
+        return STALL_MESSAGES[(currentIndex + 1) % STALL_MESSAGES.length];
+      });
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [loadingAI]);
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
     let pollCount = 0;
-    const MAX_POLLS = 20; // 60 seconds total
+    const MAX_POLLS = 30; // Increased to 90 seconds to be safe
 
     const fetchInsights = async (isForced = false) => {
       if (!isClosed) return;
@@ -150,7 +181,9 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
                     <Sparkles className="w-10 h-10 text-white animate-pulse" />
                   </div>
                 </div>
-                <p className="font-black text-indigo-600 uppercase tracking-[0.3em] text-xl animate-pulse">Thinking...</p>
+                <p className="font-black text-indigo-600 uppercase tracking-[0.1em] text-xl animate-pulse min-h-[1.5em] flex items-center justify-center">
+                  {stallMessage}
+                </p>
               </div>
             ) : aiInsights ? (
               <div className="space-y-12">
