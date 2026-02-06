@@ -36,16 +36,21 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
   const [loadingAI, setLoadingAI] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [stallMessage, setStallMessage] = useState(STALL_MESSAGES[0]);
+  const [isStallExiting, setIsStallExiting] = useState(false);
 
   // Stall message rotation
   useEffect(() => {
     if (!loadingAI) return;
     const interval = setInterval(() => {
-      setStallMessage(prev => {
-        const currentIndex = STALL_MESSAGES.indexOf(prev);
-        return STALL_MESSAGES[(currentIndex + 1) % STALL_MESSAGES.length];
-      });
-    }, 2500);
+      setIsStallExiting(true);
+      setTimeout(() => {
+        setStallMessage(prev => {
+          const currentIndex = STALL_MESSAGES.indexOf(prev);
+          return STALL_MESSAGES[(currentIndex + 1) % STALL_MESSAGES.length];
+        });
+        setIsStallExiting(false);
+      }, 500); // Wait for fade out
+    }, 4000); // 4 seconds per message
     return () => clearInterval(interval);
   }, [loadingAI]);
 
@@ -181,7 +186,7 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
                     <Sparkles className="w-10 h-10 text-white animate-pulse" />
                   </div>
                 </div>
-                <p className="font-black text-indigo-600 uppercase tracking-[0.1em] text-xl animate-pulse min-h-[1.5em] flex items-center justify-center">
+                <p className={`font-black text-indigo-600 uppercase tracking-[0.1em] text-xl min-h-[1.5em] flex items-center justify-center transition-all duration-500 ${isStallExiting ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
                   {stallMessage}
                 </p>
               </div>
