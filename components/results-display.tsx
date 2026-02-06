@@ -107,13 +107,19 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
                   setAiInsights(frenzyData);
                   setLoadingAI(false);
                   clearInterval(frenzyInterval);
+                } else {
+                  // If still processing, just keep going or show a "taking too long" message
+                  if (frenzyCount > 10) {
+                    // We don't stop the loader, but we could update UI
+                  }
                 }
               } catch (err) {
                 console.error("AI_UI: Poller error:", err);
               }
-            }, 3000); // Check every 3 seconds
+            }, 4000); // Check every 4 seconds
           }
-        } else {
+        }
+        else {
           // If already completed but fallback, or unknown, stop loading
           console.log("AI_UI: Reached end of logic, stopping loader.");
           if (data.friendJudgments) setAiInsights(data);
@@ -186,9 +192,24 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
                     <Sparkles className="w-10 h-10 text-white animate-pulse" />
                   </div>
                 </div>
-                <p className={`font-black text-indigo-600 uppercase tracking-[0.1em] text-xl min-h-[1.5em] flex items-center justify-center transition-all duration-500 ${isStallExiting ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
-                  {stallMessage}
-                </p>
+                <div className="space-y-4">
+                  <p className={`font-black text-indigo-600 uppercase tracking-[0.1em] text-xl min-h-[1.5em] flex items-center justify-center transition-all duration-500 ${isStallExiting ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
+                    {stallMessage}
+                  </p>
+                  <p className="text-black/30 text-[10px] font-bold uppercase tracking-[0.2em]">Our AI is thinking hard... may take up to 60s</p>
+                </div>
+
+                {isAdmin && (
+                  <div className="pt-4 animate-in fade-in zoom-in duration-1000 delay-[15000ms]">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setRefreshKey(prev => prev + 1)}
+                      className="text-indigo-600/40 hover:text-indigo-600 font-bold text-xs flex items-center gap-2 mx-auto"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Taking too long? Force Reload
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : aiInsights ? (
               <div className="space-y-12">

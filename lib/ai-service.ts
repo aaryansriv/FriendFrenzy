@@ -16,12 +16,12 @@ export interface AIServiceResponse {
 }
 
 const MODELS_TO_TRY = [
-    "google/gemma-3n-e4b-it:free",
-    // "google/gemini-2.0-flash-lite-preview-02-05:free",
-    // "meta-llama/llama-3.1-8b-instruct:free",
-    // "meta-llama/llama-3.2-3b-instruct:free",
-    // "google/gemma-3-4b-it:free",
-    // "tngtech/deepseek-r1t2-chimera:free"
+    "google/gemma-3-4b-it:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "google/gemma-3-12b-it:free",
+    "qwen/qwen-3-4b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "deepseek/deepseek-r1:free"
 ];
 
 export async function generatePollInsights(
