@@ -17,11 +17,6 @@ export interface AIServiceResponse {
 
 const MODELS_TO_TRY = [
     "google/gemma-3-4b-it:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemma-3-12b-it:free",
-    "qwen/qwen-3-4b:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-r1:free"
 ];
 
 export async function generatePollInsights(

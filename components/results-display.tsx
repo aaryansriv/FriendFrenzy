@@ -199,17 +199,6 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
                   <p className="text-black/30 text-[10px] font-bold uppercase tracking-[0.2em]">Our AI is thinking hard... may take up to 60s</p>
                 </div>
 
-                {isAdmin && (
-                  <div className="pt-4 animate-in fade-in zoom-in duration-1000 delay-[15000ms]">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setRefreshKey(prev => prev + 1)}
-                      className="text-indigo-600/40 hover:text-indigo-600 font-bold text-xs flex items-center gap-2 mx-auto"
-                    >
-                      <RefreshCw className="w-3 h-3" /> Taking too long? Force Reload
-                    </Button>
-                  </div>
-                )}
               </div>
             ) : aiInsights ? (
               <div className="space-y-12">
@@ -426,6 +415,6 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
             }
         `}</style>
       </div>
-    </div>
+    </div >
   );
 }
