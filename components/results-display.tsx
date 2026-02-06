@@ -189,38 +189,47 @@ export function ResultsDisplay({ pollId, questions, allResults, isClosed, isAdmi
               <div className="space-y-12">
 
                 {/* Gossip Time - Horizontal Scrollable Cards */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 ml-2">
-                    <Quote className="w-6 h-6 text-indigo-600" />
-                    <h3 className="text-2xl font-black tracking-tighter uppercase italic text-black/80">Gossip Time</h3>
+                {aiInsights.status === 'failed' ? (
+                  <div className="bg-red-50 border-4 border-red-100 rounded-[3rem] p-12 text-center space-y-4">
+                    <p className="text-red-600 font-black uppercase tracking-widest text-xl">The AI took a coffee break ☕️</p>
+                    <p className="text-red-400 font-bold max-w-md mx-auto italic">
+                      "Something went wrong while generating the roast. Even the AI couldn't handle your group's chaos. Please try again or refresh."
+                    </p>
                   </div>
-                  <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-8 snap-x snap-mandatory px-2 -mx-2 custom-scrollbar-light">
-                    {aiInsights.friendJudgments.map((j, i) => (
-                      <div key={i} className="min-w-[85vw] md:min-w-full snap-center bg-indigo-600 text-white rounded-[2.5rem] p-8 space-y-8 shadow-[10px_10px_0px_0px_#312E81] relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-700" />
+                ) : (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 ml-2">
+                      <Quote className="w-6 h-6 text-indigo-600" />
+                      <h3 className="text-2xl font-black tracking-tighter uppercase italic text-black/80">Gossip Time</h3>
+                    </div>
+                    <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 overflow-x-auto md:overflow-x-visible pb-8 md:pb-0 gap-8 snap-x snap-mandatory px-2 -mx-2 custom-scrollbar-light">
+                      {aiInsights.friendJudgments?.map((j, i) => (
+                        <div key={i} className="min-w-[85vw] md:min-w-full snap-center bg-indigo-600 text-white rounded-[2.5rem] p-8 space-y-8 shadow-[10px_10px_0px_0px_#312E81] relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-700" />
 
-                        <div className="space-y-2 relative z-10">
-                          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200 opacity-80">Character File</p>
-                          <h4 className="text-3xl font-black tracking-tighter uppercase">{j.name}</h4>
+                          <div className="space-y-2 relative z-10">
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-200 opacity-80">Character File</p>
+                            <h4 className="text-3xl font-black tracking-tighter uppercase">{j.name}</h4>
+                          </div>
+
+                          <p className="text-2xl font-bold leading-[1.2] italic relative z-10 min-h-[100px] flex items-center">
+                            "{j.judgment}"
+                          </p>
+
+                          <div className="pt-4 border-t border-white/20 flex items-center justify-between relative z-10">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/50">LEAKED BY FRENZY AI</span>
+                            <button
+                              onClick={() => handleShareRoast(j.name, j.judgment)}
+                              className="p-3 bg-white text-indigo-600 rounded-2xl hover:bg-indigo-50 transition-all active:scale-90 shadow-lg"
+                            >
+                              <Share2 className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
-
-                        <p className="text-2xl font-bold leading-[1.2] italic relative z-10 min-h-[100px] flex items-center">
-                          "{j.judgment}"
-                        </p>
-
-                        <div className="pt-4 border-t border-white/20 flex items-center justify-between relative z-10">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-white/50">LEAKED BY FRENZY AI</span>
-                          <button
-                            onClick={() => handleShareRoast(j.name, j.judgment)}
-                            className="p-3 bg-white text-indigo-600 rounded-2xl hover:bg-indigo-50 transition-all active:scale-90 shadow-lg"
-                          >
-                            <Share2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Verdict & Pair Meta */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">

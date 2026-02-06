@@ -80,6 +80,8 @@ export async function getResults(
 }
 
 export interface AIInsights {
+  status?: 'processing' | 'completed' | 'failed';
+  error?: string;
   friendJudgments: { name: string; judgment: string }[];
   songDedications: {
     name: string;

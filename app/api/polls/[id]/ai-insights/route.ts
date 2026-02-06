@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse, after } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase';
 import { generatePollInsights } from '@/lib/ai-service';
 
@@ -58,20 +58,21 @@ export async function GET(
             updated_at: new Date().toISOString()
         }, { onConflict: 'poll_id' });
 
-        // Use 'after' for background processing
-        after(async () => {
+        // Background processing
+        const runBackgroundGeneration = async () => {
             try {
-                console.log(`AI_BG_NODE: Gathering poll data for ${id}...`);
+                const supabaseBg = getSupabase();
+                console.log(`AI_BG: Gathering poll data for ${id}...`);
                 const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
-                    supabase.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
-                    supabase.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
-                    supabase.from('friends').select('id, name, gender').eq('poll_id', id),
-                    supabase.from('confessions').select('confession_text').eq('poll_id', id)
+                    supabaseBg.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
+                    supabaseBg.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
+                    supabaseBg.from('friends').select('id, name, gender').eq('poll_id', id),
+                    supabaseBg.from('confessions').select('confession_text').eq('poll_id', id)
                 ]);
 
                 if (pollRes.error || !pollRes.data) throw new Error(pollRes.error?.message || 'Poll data missing');
 
-                console.log(`AI_BG_NODE: Calling AI Service...`);
+                console.log(`AI_BG: Calling AI Service...`);
                 const aiInsights = await generatePollInsights(
                     { ...pollRes.data, creator_name: (pollRes.data as any).creators?.name },
                     resultsRes.data || [],
@@ -82,29 +83,37 @@ export async function GET(
                 const isFallback = aiInsights.friendJudgments.some(j => j.judgment.includes('FALLBACK_GENERATION'));
 
                 if (!isFallback) {
-                    console.log(`AI_BG_NODE: Success for ${id}. Saving 'completed' to DB.`);
-                    await supabase.from('poll_ai_insights').upsert({
+                    console.log(`AI_BG: Success for ${id}. Saving 'completed' to DB.`);
+                    await supabaseBg.from('poll_ai_insights').upsert({
                         poll_id: id,
                         insights: { ...aiInsights, status: 'completed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
                 } else {
-                    console.warn(`AI_BG_NODE: AI Fallback for ${id}. Saving 'failed' to DB.`);
-                    await supabase.from('poll_ai_insights').upsert({
+                    console.warn(`AI_BG: AI Fallback for ${id}. Saving 'failed' to DB.`);
+                    await supabaseBg.from('poll_ai_insights').upsert({
                         poll_id: id,
                         insights: { ...aiInsights, status: 'failed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
                 }
             } catch (err: any) {
-                console.error(`AI_BG_NODE: Generation error for ${id}:`, err);
-                await supabase.from('poll_ai_insights').upsert({
+                console.error(`AI_BG: Generation error for ${id}:`, err);
+                const supabaseErr = getSupabase();
+                await supabaseErr.from('poll_ai_insights').upsert({
                     poll_id: id,
                     insights: { status: 'failed', error: err.message },
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'poll_id' });
             }
-        });
+        };
+
+        // Use request.waitUntil if available (standard in Vercel/Next), otherwise run detached
+        if ((request as any).waitUntil) {
+            (request as any).waitUntil(runBackgroundGeneration());
+        } else {
+            runBackgroundGeneration();
+        }
 
         return NextResponse.json(processingData);
 
