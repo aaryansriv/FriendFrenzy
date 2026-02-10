@@ -4,6 +4,7 @@ import { HeroCharacters } from '@/components/hero-characters';
 
 
 import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
 
 import { Input } from '@/components/ui/input';
 
@@ -13,6 +14,7 @@ interface LandingProps {
 }
 
 export function Landing({ onStartFrenzy, initialManageMode = false }: LandingProps) {
+  const { user, isLoaded } = useUser();
   const [manageMode, setManageMode] = useState(initialManageMode);
   const [searchEmail, setSearchEmail] = useState('');
   const [frenzies, setFrenzies] = useState<any[]>([]);
@@ -24,21 +26,32 @@ export function Landing({ onStartFrenzy, initialManageMode = false }: LandingPro
     setManageMode(initialManageMode);
   }, [initialManageMode]);
 
-  const handleSearch = async () => {
-    if (!searchEmail.trim()) return;
+  useEffect(() => {
+    if (isLoaded && user && user.primaryEmailAddress?.emailAddress) {
+      const email = user.primaryEmailAddress.emailAddress;
+      setSearchEmail(email);
+      // Auto-search if we just entered manage mode or user just loaded
+      if (manageMode) {
+        handleSearchWithEmail(email);
+      }
+    }
+  }, [isLoaded, user, manageMode]);
+
+  const handleSearchWithEmail = async (email: string) => {
+    if (!email.trim()) return;
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/creators/polls?email=${encodeURIComponent(searchEmail.trim())}`);
-
+      const res = await fetch(`/api/creators/polls?email=${encodeURIComponent(email.trim())}`);
       const data = await res.json();
       setFrenzies(data.polls || []);
-      if (data.polls?.length === 0) alert('No frenzies found for this name.');
     } catch (err) {
-      alert('Search failed');
+      console.error('Search failed', err);
     } finally {
       setIsSearching(false);
     }
   };
+
+  const handleSearch = () => handleSearchWithEmail(searchEmail);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">

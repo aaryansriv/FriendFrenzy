@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,6 +97,7 @@ interface FrenzyCreationProps {
 }
 
 export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
+  const { user } = useUser();
   const [step, setStep] = useState<'setup' | 'share'>('setup');
   const [friends, setFriends] = useState<Friend[]>([
     { name: '', gender: '' },
@@ -114,6 +116,14 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [frenzyName, setFrenzyName] = useState('');
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      if (user.fullName && !frenzyName) setFrenzyName(user.fullName);
+      const userEmail = user.primaryEmailAddress?.emailAddress;
+      if (userEmail && !email) setEmail(userEmail);
+    }
+  }, [user, frenzyName, email]);
 
 
 
