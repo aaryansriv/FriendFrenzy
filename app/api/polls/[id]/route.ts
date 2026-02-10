@@ -41,7 +41,7 @@ export async function GET(
       friends: friends || [],
       expires_at: poll.expires_at,
       status: poll.status,
-      creatorName: poll.creators?.name,
+      frenzyName: poll.poll_name,
     });
 
   } catch (error) {

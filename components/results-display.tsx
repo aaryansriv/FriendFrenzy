@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Crown, Sparkles, Music, Quote, Users, Play, ExternalLink, RefreshCw, Share2 } from 'lucide-react';
+import { Crown, Sparkles, Music, Quote, Users, Play, ExternalLink, Share2, BarChart2 } from 'lucide-react';
 import { getAIInsights, AIInsights } from '@/lib/api';
+import { PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
 
 interface ResultsDisplayProps {
   frenzyId: string;
@@ -11,6 +12,7 @@ interface ResultsDisplayProps {
   allResults: Record<string, Record<string, number>>;
   isClosed: boolean;
   isAdmin?: boolean;
+  friends?: { id: string; name: string }[];
 }
 
 const STALL_MESSAGES = [
@@ -31,10 +33,9 @@ const STALL_MESSAGES = [
   "Brewing the perfect blend of sarcasm...",
 ];
 
-export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAdmin }: ResultsDisplayProps) {
+export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAdmin, friends }: ResultsDisplayProps) {
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null);
   const [loadingAI, setLoadingAI] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [stallMessage, setStallMessage] = useState(STALL_MESSAGES[0]);
   const [isStallExiting, setIsStallExiting] = useState(false);
 
@@ -131,12 +132,12 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
       }
     };
 
-    fetchInsights(refreshKey > 0);
+    fetchInsights(false);
 
     return () => {
       if (frenzyInterval) clearInterval(frenzyInterval);
     };
-  }, [frenzyId, isClosed, refreshKey]);
+  }, [frenzyId, isClosed]);
 
   if (!questions) return null;
 
@@ -158,6 +159,89 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
           </h1>
         </div>
 
+        {/* Live / Raw Results Section */}
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+          <div className="flex items-center gap-3 border-b-2 border-black/5 pb-4">
+            <BarChart2 className="w-6 h-6 text-black" />
+            <h2 className="text-2xl font-black uppercase tracking-tight">Votes till now</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {questions.map((question, idx) => {
+              const qResults = allResults[question] || {};
+              const totalQVotes = Object.values(qResults).reduce((a, b) => a + b, 0);
+              const sortedResults = Object.entries(qResults).sort(([, a], [, b]) => b - a);
+
+              const pairTemplate = PAIR_FRENZY_QUESTIONS.find(t => {
+                const regex = new RegExp(t.template.replace('{A}', '.*').replace('{B}', '.*'));
+                return regex.test(question);
+              });
+
+              return (
+                <div key={idx} className="bg-white border-4 border-black p-8 rounded-[2.5rem] space-y-6 shadow-xl hover:shadow-2xl transition-all">
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-black leading-tight min-h-[3rem]">{question}</h3>
+                    <p className="text-sm font-bold text-black/40">
+                      {totalQVotes} {totalQVotes === 1 ? 'vote' : 'votes'} total
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {pairTemplate ? (
+                      pairTemplate.options.map((opt) => {
+                        const votes = qResults[`option:${opt}`] || 0;
+                        const percentage = totalQVotes > 0 ? (votes / totalQVotes) * 100 : 0;
+                        const isWinning = votes > 0 && votes === Math.max(...Object.values(qResults));
+
+                        return (
+                          <div key={opt} className="space-y-2">
+                            <div className="flex justify-between items-center text-sm font-bold">
+                              <span className="flex items-center gap-2">
+                                {opt}% {isWinning && <Crown className="w-4 h-4 text-yellow-500 fill-current" />}
+                              </span>
+                              <span>{votes} ({Math.round(percentage)}%)</span>
+                            </div>
+                            <div className="h-2.5 bg-black/5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-1000 ${isWinning ? 'bg-indigo-600' : 'bg-indigo-600/20'}`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Handle friend-based questions
+                      (friends || []).map((friend) => {
+                        const votes = qResults[friend.name] || qResults[friend.id] || 0;
+                        const percentage = totalQVotes > 0 ? (votes / totalQVotes) * 100 : 0;
+                        const isWinning = votes > 0 && votes === Math.max(...Object.values(qResults));
+
+                        return (
+                          <div key={friend.id} className="space-y-2">
+                            <div className="flex justify-between items-center text-sm font-bold">
+                              <span className="flex items-center gap-2">
+                                {friend.name} {isWinning && <Crown className="w-4 h-4 text-yellow-500 fill-current" />}
+                              </span>
+                              <span>{votes} ({Math.round(percentage)}%)</span>
+                            </div>
+                            <div className="h-2.5 bg-black/5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full transition-all duration-1000 ${isWinning ? 'bg-indigo-600' : 'bg-indigo-600/20'}`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Frenzy AI Section */}
         {isClosed && (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20">
@@ -172,16 +256,6 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
                 <p className="text-black/40 font-bold text-sm uppercase tracking-widest ml-1 text-center md:text-left">The leaks are out. Nobody is safe.</p>
               </div>
 
-              {isAdmin && (
-                <Button
-                  onClick={() => setRefreshKey(prev => prev + 1)}
-                  disabled={loadingAI}
-                  className="bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white border-2 border-indigo-600 rounded-2xl font-black px-6 h-12 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-5 h-5 mr-2 ${loadingAI ? 'animate-spin' : ''}`} />
-                  {loadingAI ? 'RE-ANALYZING...' : 'REGENERATE VERDICT'}
-                </Button>
-              )}
             </div>
 
             {loadingAI ? (
@@ -208,7 +282,7 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
                   <div className="bg-red-50 border-4 border-red-100 rounded-[3rem] p-12 text-center space-y-4">
                     <p className="text-red-600 font-black uppercase tracking-widest text-xl">The AI took a coffee break ☕️</p>
                     <p className="text-red-400 font-bold max-w-md mx-auto italic">
-                      "Something went wrong while generating the roast. Even the AI couldn't handle your group's chaos. Please try again or refresh."
+                      "Something went wrong while generating the roast. Even the AI couldn't handle your group's chaos. This poll is officially too wild for Silicon Valley."
                     </p>
                   </div>
                 ) : (
@@ -349,8 +423,8 @@ export function ResultsDisplay({ frenzyId, questions, allResults, isClosed, isAd
           </div>
         )}
 
-        {/* Share Button (moved and styled) */}
-        {isClosed && (
+        {/* Share Button (moved and styled) - Only show for admin */}
+        {isClosed && isAdmin && (
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-40 animate-in slide-in-from-bottom-10 duration-1000 delay-500">
             <Button
               onClick={() => {

@@ -13,9 +13,6 @@ export async function GET(
     try {
         const { id } = await params;
         const supabase = getSupabase();
-        const force = request.nextUrl.searchParams.get('force') === 'true';
-
-        console.log(`AI_ROUTE: Fetching insights for poll ${id} (force: ${force})`);
 
         // Check for required environment variables
         if (!process.env.OPENROUTER_API_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -35,14 +32,14 @@ export async function GET(
 
         const insights = report?.insights;
 
-        // 2. If it's already completed and we aren't forcing, return it
-        if (insights?.status === 'completed' && !force) {
-            console.log(`AI_ROUTE: Serving completed insights for ${id}`);
+        // 2. If it's already completed or failed, return it
+        if (insights?.status === 'completed' || insights?.status === 'failed') {
+            console.log(`AI_ROUTE: Serving existing ${insights.status} insights for ${id}`);
             return NextResponse.json(insights);
         }
 
-        // 3. If it's processing and we aren't forcing, tell the client to keep polling
-        if (insights?.status === 'processing' && !force) {
+        // 3. If it's processing, tell the client to keep polling
+        if (insights?.status === 'processing') {
             console.log(`AI_ROUTE: Report for ${id} is still processing...`);
             return NextResponse.json({ status: 'processing', message: 'The AI is cooking...' });
         }
@@ -64,7 +61,7 @@ export async function GET(
                 const supabaseBg = getSupabase();
                 console.log(`AI_BG: Gathering poll data for ${id}...`);
                 const [pollRes, resultsRes, friendsRes, confessionsRes] = await Promise.all([
-                    supabaseBg.from('polls').select('status, question_set, creators(name)').eq('id', id).single(),
+                    supabaseBg.from('polls').select('status, question_set, poll_name').eq('id', id).single(),
                     supabaseBg.from('results').select('question, friend_id, answer_option, friends(name), vote_count').eq('poll_id', id),
                     supabaseBg.from('friends').select('id, name, gender').eq('poll_id', id),
                     supabaseBg.from('confessions').select('confession_text').eq('poll_id', id)
@@ -73,8 +70,11 @@ export async function GET(
                 if (pollRes.error || !pollRes.data) throw new Error(pollRes.error?.message || 'Poll data missing');
 
                 console.log(`AI_BG: Calling AI Service...`);
+                // Use poll_name as the creator name context for the AI
+                const frenzyName = pollRes.data.poll_name || 'Anonymous Frenzy';
+
                 const aiInsights = await generatePollInsights(
-                    { ...pollRes.data, creator_name: (pollRes.data as any).creators?.name },
+                    { ...pollRes.data, frenzyName },
                     resultsRes.data || [],
                     friendsRes.data || [],
                     confessionsRes.data?.map((c: any) => c.confession_text) || []
@@ -86,6 +86,7 @@ export async function GET(
                     console.log(`AI_BG: Success for ${id}. Saving 'completed' to DB.`);
                     await supabaseBg.from('poll_ai_insights').upsert({
                         poll_id: id,
+                        poll_name: frenzyName,
                         insights: { ...aiInsights, status: 'completed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });
@@ -93,6 +94,7 @@ export async function GET(
                     console.warn(`AI_BG: AI Fallback for ${id}. Saving 'failed' to DB.`);
                     await supabaseBg.from('poll_ai_insights').upsert({
                         poll_id: id,
+                        poll_name: frenzyName,
                         insights: { ...aiInsights, status: 'failed' },
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'poll_id' });

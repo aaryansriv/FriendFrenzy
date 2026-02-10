@@ -14,6 +14,7 @@ interface Frenzy {
   id: string;
   questions: string[];
   friends: Friend[];
+  frenzyName?: string;
 }
 
 interface VotingInterfaceProps {
@@ -88,8 +89,8 @@ export function VotingInterface({ frenzy, onVotesSubmit, isSubmitting }: VotingI
     <div className="min-h-screen bg-white flex flex-col p-8 md:p-12">
       <div className="max-w-6xl mx-auto w-full space-y-12">
         <div className="text-center space-y-4">
-          <h1 className="text-5xl font-black">Anonymous Voting</h1>
-          <p className="text-xl text-black/60 font-medium tracking-tight">
+          <h1 className="text-6xl font-black uppercase tracking-tighter">{frenzy.frenzyName || 'Anonymous Frenzy'}</h1>
+          <p className="text-xl text-black/60 font-bold tracking-tight">
             Pick which friend fits each question best!
           </p>
         </div>

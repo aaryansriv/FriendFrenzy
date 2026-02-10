@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { getSupabase } from '@/lib/supabase';
 import { PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
 
@@ -12,11 +13,11 @@ function getClientIp(request: NextRequest): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { creatorName, friends, questions, email } = body;
+    const { frenzyName, friends, questions, email } = body;
 
-    if (!creatorName || typeof creatorName !== 'string' || creatorName.trim().length === 0) {
+    if (!frenzyName || typeof frenzyName !== 'string' || frenzyName.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Creator name is required' },
+        { error: 'Frenzy name is required' },
         { status: 400 }
       );
     }
@@ -63,21 +64,35 @@ export async function POST(request: NextRequest) {
 
     // 1. Handle Creator (Upsert style approach)
     let creatorId: string;
+    const { userId: clerkId } = await auth();
 
-    // Check if creator exists by EMAIL
-    const { data: existingCreator, error: fetchError } = await supabase
+    // Check if creator exists by EMAIL - handle multiple rows by picking the best match
+    const { data: dbCreators, error: fetchError } = await supabase
       .from('creators')
-      .select('id')
+      .select('id, clerk_id')
       .eq('email', email.trim())
-      .maybeSingle();
+      .order('clerk_id', { ascending: false, nullsFirst: false }); // Prioritize ones with clerk_id
+
+    const existingCreator = dbCreators && dbCreators.length > 0 ? dbCreators[0] : null;
 
     if (existingCreator) {
       creatorId = existingCreator.id;
+      // If found by email but clerk_id is missing, link it now
+      if (!existingCreator.clerk_id && clerkId) {
+        await supabase
+          .from('creators')
+          .update({ clerk_id: clerkId })
+          .eq('id', creatorId);
+      }
     } else {
-      // Create new creator
+      // Create new creator record
       const { data: newCreator, error: createError } = await supabase
         .from('creators')
-        .insert({ name: creatorName.trim(), email: email.trim() })
+        .insert({
+          name: email.split('@')[0], // Use email prefix as default name
+          email: email.trim(),
+          clerk_id: clerkId || null
+        })
         .select('id')
         .single();
 
@@ -98,6 +113,7 @@ export async function POST(request: NextRequest) {
     const { data: pollData, error: pollError } = await supabase
       .from('polls')
       .insert({
+        poll_name: frenzyName.trim(),
         creator_id: creatorId,
         creator_ip: clientIp,
         question_set: questions,

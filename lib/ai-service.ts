@@ -51,6 +51,7 @@ export async function generatePollInsights(
     console.log(`AI_SERVICE: Extracted dominance map:`, dominance);
 
     const pollSummary = {
+        frenzyName: pollData.frenzyName || pollData.poll_name || 'Anonymous Frenzy',
         friends: friends.map(f => f.name),
         dominance,
         topDog: Object.entries(dominance).sort((a, b) => b[1] - a[1])[0] || ["None", 0],
@@ -59,7 +60,7 @@ export async function generatePollInsights(
     };
 
     const systemPrompt = `You are NOT an assistant.
-You are the funniest, most observant person in the group chat who finally got access to the poll results and anonymous confessions.
+You are the funniest, most observant person in the group chat who finally got access to the poll results and anonymous confessions for the frenzy titled "{{frenzyName}}".
 
 Your job is to JUDGE the group.
 
@@ -120,7 +121,6 @@ Write ONE sentence that:
 - Feels like a viral tweet
 - Explains the group dynamic
 - Mentions chaos level
-- Sounds like it was typed at 2:17 AM
 No generic summaries.
 
 -----------------------------
@@ -161,7 +161,7 @@ STYLE CONSTRAINTS
 - Avoid polished writing
 - Slightly unhinged > overly clever
 - Run-on sentences allowed
-- Dry humor preferred
+- Dank humor preferred
 - No corporate tone
 - No moral lectures
 - No compliments without irony
@@ -232,9 +232,9 @@ ${JSON.stringify(pollSummary, null, 2)}
                 body: JSON.stringify({
                     model: model,
                     messages: [
-                        { role: "user", content: `${systemPrompt}\n\nTask:\n${userPrompt}` }
+                        { role: "user", content: `${systemPrompt.replace('{{frenzyName}}', pollSummary.frenzyName)}\n\nTask:\n${userPrompt}` }
                     ],
-                    temperature: 0.8,
+                    temperature: 0.7,
                     max_tokens: 1000
                 })
             });

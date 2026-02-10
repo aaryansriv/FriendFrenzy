@@ -24,7 +24,7 @@ export async function GET(
         if (!organized[result.question]) {
           organized[result.question] = {};
         }
-        const label = result.answer_option ? `${result.answer_option}%` : (result.friends?.name || 'Unknown');
+        const label = result.answer_option ? `option:${result.answer_option}` : (result.friends?.name || 'Unknown');
         organized[result.question][label] = result.vote_count || 0;
       }
     }
@@ -32,10 +32,10 @@ export async function GET(
     // 3. Get unique voter count
     const { data: votes } = await supabase
       .from('votes')
-      .select('voter_ip')
+      .select('voter_id')
       .eq('poll_id', id);
 
-    const totalVoters = votes ? new Set(votes.map((v: any) => v.voter_ip)).size : 0;
+    const totalVoters = votes ? new Set(votes.map((v: any) => v.voter_id)).size : 0;
 
     return NextResponse.json({
       results: organized,

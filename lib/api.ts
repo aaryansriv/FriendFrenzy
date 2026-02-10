@@ -1,5 +1,5 @@
 export interface CreateFrenzyRequest {
-  creatorName: string;
+  frenzyName: string;
   email: string;
   friends: { name: string; gender: string }[];
   questions: string[];
@@ -11,7 +11,7 @@ export interface Frenzy {
   friends: { id: string; name: string }[];
   expires_at: string;
   status: string;
-  creatorName?: string;
+  frenzyName?: string;
 }
 
 

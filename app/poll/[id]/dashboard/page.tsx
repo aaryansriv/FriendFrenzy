@@ -6,6 +6,7 @@ import { Frenzy, getFrenzy, getResults } from '@/lib/api';
 import { Loader2, Users, BarChart2, Share2, Crown, Lock, Unlock, Calendar, Trash2, ArrowLeft, Sparkles, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResultsDisplay } from '@/components/results-display';
+import { PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
 
 export default function DashboardPage() {
     const params = useParams();
@@ -117,7 +118,7 @@ export default function DashboardPage() {
                 <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-black/10 pb-12">
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                            <h1 className="text-4xl font-black">{frenzy.creatorName}'s Dashboard</h1>
+                            <h1 className="text-4xl font-black">{frenzy.frenzyName}</h1>
                             <span className="px-3 py-1 bg-black text-white text-[10px] font-black uppercase rounded-full">Admin</span>
                         </div>
                         <p className="text-black/60 font-black uppercase text-xs tracking-widest">Managing: {frenzyId}</p>
@@ -137,44 +138,64 @@ export default function DashboardPage() {
                 </header>
 
                 {/* Stats Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="bg-black text-white p-8 rounded-3xl space-y-2">
                         <Users className="w-8 h-8 opacity-50" />
                         <p className="text-sm font-bold opacity-60">Total Users Voted</p>
                         <p className="text-5xl font-black">{totalVoters}</p>
                     </div>
-                    <div className="bg-white border-4 border-black p-8 rounded-3xl space-y-2">
-                        <BarChart2 className="w-8 h-8 text-black opacity-50" />
-                        <p className="text-sm font-bold text-black/60">Frenzy Status</p>
-                        <p className="text-3xl font-black uppercase">{frenzy.status}</p>
-                    </div>
-                    <div className="bg-white border-4 border-black p-8 rounded-3xl space-y-4">
-                        <Calendar className="w-8 h-8 text-black opacity-50" />
+                    <div className="bg-white border-4 border-black p-8 rounded-3xl space-y-6">
                         <div className="flex items-center justify-between">
-                            <p className="text-sm font-bold text-black/60">Frenzy Actions</p>
-                            <span className="text-[10px] font-black bg-black/5 px-2 py-0.5 rounded-full uppercase text-black/40">Expires +7 Days</span>
+                            <div className="space-y-1">
+                                <p className="text-sm font-bold text-black/60">Frenzy Status</p>
+                                <p className="text-3xl font-black uppercase text-black">{frenzy.status}</p>
+                            </div>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${frenzy.status === 'active' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                {frenzy.status === 'active' ? <BarChart2 className="w-6 h-6" /> : <Lock className="w-6 h-6" />}
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={isProcessing}
-                                onClick={() => handleAction(frenzy.status === 'active' ? 'close' : 'open')}
-                                className={`border-2 border-black rounded-full font-bold transition-all ${frenzy.status === 'active' ? 'bg-black text-white hover:bg-black/80' : 'bg-white text-black hover:bg-black/5'}`}
-                            >
-                                {frenzy.status === 'active' ? <Lock className="w-4 h-4 mr-2" /> : <Unlock className="w-4 h-4 mr-2" />}
-                                {frenzy.status === 'active' ? 'Status: Active (Close)' : 'Status: Closed (Open)'}
-                            </Button>
 
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                disabled={isProcessing}
-                                onClick={handleDelete}
-                                className="rounded-full font-bold"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
-                            </Button>
+                        <div className="flex flex-col gap-3">
+                            {frenzy.status === 'active' ? (
+                                <Button
+                                    disabled={isProcessing}
+                                    onClick={() => handleAction('close')}
+                                    className="w-full bg-black text-white hover:bg-black/90 h-14 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <Lock className="w-5 h-5" /> Close Poll
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => {
+                                        const el = document.getElementById('ai-preview');
+                                        el?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="w-full bg-indigo-600 text-white hover:bg-indigo-700 h-14 rounded-2xl font-black text-lg transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <Sparkles className="w-5 h-5" /> Generate Verdict
+                                </Button>
+                            )}
+
+                            <div className="flex gap-2">
+                                {frenzy.status === 'closed' && (
+                                    <Button
+                                        variant="outline"
+                                        disabled={isProcessing}
+                                        onClick={() => handleAction('open')}
+                                        className="flex-1 border-2 border-black rounded-xl font-bold h-10 text-xs"
+                                    >
+                                        <Unlock className="w-3 h-3 mr-2" /> Re-open Poll
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="destructive"
+                                    disabled={isProcessing}
+                                    onClick={handleDelete}
+                                    className="flex-1 rounded-xl font-bold h-10 text-xs"
+                                >
+                                    <Trash2 className="w-3 h-3 mr-2" /> Delete Poll
+                                </Button>
+                            </div>
                         </div>
                     </div>
 
@@ -233,32 +254,67 @@ export default function DashboardPage() {
                                 <div key={idx} className="border-4 border-black p-8 rounded-3xl space-y-6">
                                     <div className="space-y-2">
                                         <h3 className="text-xl font-black leading-tight">{question}</h3>
-                                        <p className="text-sm font-bold text-black/60">{totalQVotes} votes total</p>
+                                        <p className="text-sm font-bold text-black/60">{totalQVotes} {totalQVotes === 1 ? 'vote' : 'votes'} total</p>
                                     </div>
 
                                     <div className="space-y-4">
-                                        {frenzy.friends.map((friend: any) => {
-                                            const votes = qResults[friend.name] || 0;
-                                            const percentage = totalQVotes > 0 ? (votes / totalQVotes) * 100 : 0;
-                                            const isWinning = votes > 0 && votes === sortedResults[0]?.[1];
+                                        {(() => {
+                                            // 1. Detect if it's a Pair Frenzy question
+                                            const pairTemplate = PAIR_FRENZY_QUESTIONS.find(t => {
+                                                const regex = new RegExp(t.template.replace('{A}', '.*').replace('{B}', '.*'));
+                                                return regex.test(question);
+                                            });
 
-                                            return (
-                                                <div key={friend.id} className="space-y-2">
-                                                    <div className="flex justify-between items-center text-sm font-bold">
-                                                        <span className="flex items-center gap-2">
-                                                            {friend.name} {isWinning && <Crown className="w-4 h-4 text-yellow-500 fill-current" />}
-                                                        </span>
-                                                        <span>{votes} ({Math.round(percentage)}%)</span>
+                                            if (pairTemplate) {
+                                                // Display percentage options
+                                                return pairTemplate.options.map((opt) => {
+                                                    const votes = qResults[`option:${opt}`] || 0;
+                                                    const percentage = totalQVotes > 0 ? (votes / totalQVotes) * 100 : 0;
+                                                    const isWinning = votes > 0 && votes === Math.max(...Object.values(qResults));
+
+                                                    return (
+                                                        <div key={opt} className="space-y-2">
+                                                            <div className="flex justify-between items-center text-sm font-bold">
+                                                                <span className="flex items-center gap-2">
+                                                                    {opt}% {isWinning && <Crown className="w-4 h-4 text-yellow-500 fill-current" />}
+                                                                </span>
+                                                                <span>{votes} ({Math.round(percentage)}%)</span>
+                                                            </div>
+                                                            <div className="h-3 bg-black/10 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full transition-all duration-500 ${isWinning ? 'bg-indigo-600' : 'bg-indigo-600/30'}`}
+                                                                    style={{ width: `${percentage}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            }
+
+                                            // 2. Fallback to friend-based results
+                                            return frenzy.friends.map((friend: any) => {
+                                                const votes = qResults[friend.id] || qResults[friend.name] || 0;
+                                                const percentage = totalQVotes > 0 ? (votes / totalQVotes) * 100 : 0;
+                                                const isWinning = votes > 0 && votes === Math.max(...Object.values(qResults));
+
+                                                return (
+                                                    <div key={friend.id} className="space-y-2">
+                                                        <div className="flex justify-between items-center text-sm font-bold">
+                                                            <span className="flex items-center gap-2">
+                                                                {friend.name} {isWinning && <Crown className="w-4 h-4 text-yellow-500 fill-current" />}
+                                                            </span>
+                                                            <span>{votes} ({Math.round(percentage)}%)</span>
+                                                        </div>
+                                                        <div className="h-3 bg-black/10 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full transition-all duration-500 ${isWinning ? 'bg-black' : 'bg-black/30'}`}
+                                                                style={{ width: `${percentage}%` }}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <div className="h-3 bg-black/10 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full transition-all duration-500 ${isWinning ? 'bg-black' : 'bg-black/30'}`}
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            });
+                                        })()}
                                     </div>
                                 </div>
                             );
@@ -282,6 +338,7 @@ export default function DashboardPage() {
                                 allResults={results}
                                 isClosed={true}
                                 isAdmin={true}
+                                friends={frenzy.friends}
                             />
                         </div>
                     </div>

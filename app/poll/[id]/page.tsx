@@ -46,9 +46,9 @@ export default function FrenzyPage() {
 
   // Real-time polling for results updates
   useEffect(() => {
-    if (votedQuestions.size === 0 || !frenzy) return;
+    if (!frenzy) return;
 
-    const interval = setInterval(async () => {
+    const fetchRes = async () => {
       try {
         const resultsData = await getResults(frenzyId);
         setAllResults(resultsData.results);
@@ -56,10 +56,23 @@ export default function FrenzyPage() {
       } catch (err) {
         console.error('Failed to fetch results:', err);
       }
-    }, 2000);
+    };
 
-    return () => clearInterval(interval);
-  }, [votedQuestions, frenzy, frenzyId]);
+    // Initial fetch if closed or already voting
+    if (frenzy.status === 'closed' || votedQuestions.size > 0) {
+      fetchRes();
+    }
+
+    // Polling only if active or voting
+    let interval: NodeJS.Timeout;
+    if (frenzy.status === 'active') {
+      interval = setInterval(fetchRes, 5000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [frenzy, frenzyId, votedQuestions.size]);
 
 
   const handleVote = async (friendId: string) => {
@@ -164,6 +177,7 @@ export default function FrenzyPage() {
           questions={frenzy.questions}
           allResults={allResults}
           isClosed={true}
+          friends={frenzy.friends}
         />
       </main>
     );
@@ -212,6 +226,7 @@ export default function FrenzyPage() {
           questions={frenzy.questions}
           allResults={allResults}
           isClosed={frenzy.status === 'closed'}
+          friends={frenzy.friends}
         />
       ) : (
         <VotingInterface

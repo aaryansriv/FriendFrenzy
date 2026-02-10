@@ -5,7 +5,8 @@ import { useUser } from '@clerk/nextjs';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Plus, Copy, Check, Search, X, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Plus, Copy, Check, Search, X, LayoutDashboard, Sparkles } from 'lucide-react';
+import { SignInButton } from '@clerk/nextjs';
 
 import { createFrenzy } from '@/lib/api';
 import { QUESTION_BANK, QuestionCategory, PAIR_FRENZY_QUESTIONS } from '@/lib/questions';
@@ -97,7 +98,7 @@ interface FrenzyCreationProps {
 }
 
 export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [step, setStep] = useState<'setup' | 'share'>('setup');
   const [friends, setFriends] = useState<Friend[]>([
     { name: '', gender: '' },
@@ -109,7 +110,6 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
   const [frenzyInputs, setFrenzyInputs] = useState<Record<string, { a: string, b: string }>>({});
   const [customQuestion, setCustomQuestion] = useState('');
   const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [frenzyId, setFrenzyId] = useState<string>('');
   const [frenzyLink, setFrenzyLink] = useState('');
   const [copied, setCopied] = useState(false);
@@ -119,11 +119,10 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
 
   useEffect(() => {
     if (user) {
-      if (user.fullName && !frenzyName) setFrenzyName(user.fullName);
       const userEmail = user.primaryEmailAddress?.emailAddress;
       if (userEmail && !email) setEmail(userEmail);
     }
-  }, [user, frenzyName, email]);
+  }, [user, email]);
 
 
 
@@ -212,7 +211,7 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
     setIsCreating(true);
     try {
       const result = await createFrenzy({
-        creatorName: frenzyName.trim(),
+        frenzyName: frenzyName.trim(),
         email: email.trim(),
         friends: validFriends.map(f => ({ name: f.name.trim(), gender: f.gender })),
         questions: allQuestions,
@@ -230,10 +229,7 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
   };
 
 
-  const filteredQuestions = (QUESTION_BANK[activeCategory] || []).filter((q: any) => {
-    const text = typeof q === 'string' ? q : q.template;
-    return text.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredQuestions = QUESTION_BANK[activeCategory] || [];
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(frenzyLink);
@@ -249,7 +245,7 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
             <div className="w-16 h-16 bg-black rounded-full mx-auto flex items-center justify-center">
               <Check className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-4xl font-bold">Frenzy Created!</h2>
+            <h1 className="text-4xl font-black">{frenzyName}</h1>
             <p className="text-xl text-black/60">
               Share this link with your friends to collect their anonymous votes
             </p>
@@ -352,19 +348,43 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
     );
   }
 
+  if (isLoaded && !user) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8 text-center">
+        <div className="max-w-md space-y-8">
+          <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto rotate-3">
+            <Sparkles className="w-10 h-10 text-indigo-600" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-4xl font-black">Sign In Required</h2>
+            <p className="text-xl text-black/60 font-medium">You need to be logged in to create a new frenzy and track its results.</p>
+          </div>
+          <div className="pt-4 flex flex-col gap-4">
+            <SignInButton mode="modal">
+              <Button className="w-full bg-indigo-600 text-white hover:bg-indigo-700 h-16 rounded-full text-xl font-black shadow-xl shadow-indigo-100 transition-all active:scale-95">
+                Sign In to Start
+              </Button>
+            </SignInButton>
+            <button onClick={onBack} className="text-black/40 font-bold hover:text-black transition">
+              ← Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Main Content */}
-
       <div className="flex-1 flex items-center justify-center px-8 py-12">
         <div className="max-w-5xl w-full space-y-10">
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold">Frenzy Name</h2>
-                <p className="text-black/60">Something catchy for your squad</p>
+                <p className="text-black/60">Give your frenzy a name to remember it by</p>
                 <Input
-                  placeholder="e.g. Squad2024"
+                  placeholder="e.g. Bluff or Foodwalk"
                   value={frenzyName}
                   onChange={(e) => setFrenzyName(e.target.value)}
                   className="bg-white border-2 border-black/20 rounded-full px-6 h-14 focus:border-black placeholder-black/40 text-black"
@@ -372,23 +392,16 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
               </div>
 
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold">Your Gmail</h2>
-                <p className="text-black/60">Used to manage all your frenzies</p>
-                <Input
-                  placeholder="name@gmail.com"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white border-2 border-black/20 rounded-full px-6 h-14 focus:border-black placeholder-black/40 text-black"
-                />
+                <h2 className="text-2xl font-bold">Account Connected</h2>
+                <p className="text-black/60">Successfully linked to your email</p>
+                <div className="bg-indigo-50 border-2 border-indigo-100 rounded-full px-6 h-14 flex items-center">
+                  <span className="text-indigo-600 font-bold">{email || 'Fetching...'}</span>
+                </div>
               </div>
             </div>
           </div>
 
-
-
           {/* Friends Section */}
-
           <div className="space-y-6">
             <div className="space-y-1">
               <h2 className="text-2xl font-bold">Add Your Friends</h2>
@@ -547,13 +560,13 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
                 <button
                   onClick={() => {
                     setShowQuestionModal(false);
-                    setSearchQuery('');
                   }}
                   className="w-12 h-12 bg-white/10 hover:bg-white text-white hover:text-black rounded-full flex items-center justify-center transition-all"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
+
 
               {/* Categories */}
               <div className="flex flex-wrap gap-2">
@@ -659,7 +672,6 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
               <Button
                 onClick={() => {
                   setShowQuestionModal(false);
-                  setSearchQuery('');
                 }}
                 className="w-full bg-black text-white hover:bg-black/80 h-16 text-xl font-black rounded-full"
               >
@@ -672,4 +684,3 @@ export function FrenzyCreation({ onBack }: FrenzyCreationProps) {
     </div>
   );
 }
-
