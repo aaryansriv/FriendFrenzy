@@ -47,19 +47,22 @@ export const metadata: Metadata = {
   },
 }
 
+import { ClerkProvider } from '@clerk/nextjs'
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`${_geist.className} antialiased`}>
-        <Header />
-        {children}
-        <Analytics />
-      </body>
-
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`${_geist.className} antialiased`}>
+          <Header />
+          {children}
+          <Analytics />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

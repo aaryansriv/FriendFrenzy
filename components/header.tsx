@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { SignInButton, UserButton, SignedIn, SignedOut } from '@clerk/nextjs'
 
 export function Header() {
     return (
@@ -19,13 +20,28 @@ export function Header() {
                 </Link>
             </div>
 
-            <Link href="/?create=true">
-                <Button
-                    className="bg-transparent border-2 border-black text-black hover:bg-black hover:text-white rounded-full px-6 py-2 font-bold transition h-12"
-                >
-                    Create Frenzy
-                </Button>
-            </Link>
+            <div className="flex items-center gap-4">
+                <SignedOut>
+                    <SignInButton mode="modal">
+                        <Button
+                            variant="outline"
+                            className="bg-transparent border-2 border-black text-black hover:bg-black hover:text-white rounded-full px-6 py-2 font-bold transition h-12"
+                        >
+                            Sign In
+                        </Button>
+                    </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                    <UserButton />
+                </SignedIn>
+                <Link href="/?create=true">
+                    <Button
+                        className="bg-transparent border-2 border-black text-black hover:bg-black hover:text-white rounded-full px-6 py-2 font-bold transition h-12"
+                    >
+                        Create Frenzy
+                    </Button>
+                </Link>
+            </div>
         </nav>
     );
 }
